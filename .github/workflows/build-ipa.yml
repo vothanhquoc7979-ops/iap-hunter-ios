@@ -5,6 +5,9 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-ipa:
     runs-on: macos-15
@@ -33,9 +36,11 @@ jobs:
 
       - name: Compile & Embed In-App StoreKit Scanner Tweak (IAPHunterTweak.dylib)
         run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           xcrun -sdk iphoneos clang -arch arm64 -dynamiclib -fobjc-arc \
+            -isysroot "$SDK_PATH" \
             -miphoneos-version-min=15.0 \
-            -framework UIKit -framework StoreKit -framework Foundation \
+            -framework UIKit -framework StoreKit -framework Foundation -framework QuartzCore -framework CoreGraphics \
             -install_name @executable_path/Frameworks/IAPHunterTweak.dylib \
             Tweak/IAPHunterTweak.m -o IAPHunterTweak.dylib
 
@@ -52,20 +57,17 @@ jobs:
 
           # 2. Google Gemini Pre-Bound StoreKit IPA (com.google.gemini)
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.google.gemini" Payload/IAPHunter.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Gemini IAP" Payload/IAPHunter.app/Info.plist || true
           zip -r9 IAPHunter-Gemini.ipa Payload
 
           # 3. Google One Pre-Bound StoreKit IPA (com.google.GoogleOne)
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.google.GoogleOne" Payload/IAPHunter.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName G-One IAP" Payload/IAPHunter.app/Info.plist || true
           zip -r9 IAPHunter-GoogleOne.ipa Payload
 
           # 4. CapCut Pre-Bound StoreKit IPA (com.lemon.lvoverseas)
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.lemon.lvoverseas" Payload/IAPHunter.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName CapCut IAP" Payload/IAPHunter.app/Info.plist || true
           zip -r9 IAPHunter-CapCut.ipa Payload
 
-      - name: Upload Pre-Embedded IPAs & Tweak Dylib
+      - name: Upload Pre-Embedded IPAs & Tweak Dylib Artifact
         uses: actions/upload-artifact@v4
         with:
           name: IAPHunter-IPA
@@ -76,3 +78,17 @@ jobs:
             IAPHunter-CapCut.ipa
             IAPHunterTweak.dylib
           if-no-files-found: error
+
+      - name: Publish Pre-Embedded IPAs & Dylib to GitHub Release v1.0.0
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "IAP Hunter iOS (Nhúng sẵn StoreKit Tweak & IPA)"
+          files: |
+            IAPHunter-Unsigned.ipa
+            IAPHunter-Gemini.ipa
+            IAPHunter-GoogleOne.ipa
+            IAPHunter-CapCut.ipa
+            IAPHunterTweak.dylib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
