@@ -47,24 +47,305 @@ const REGIONS = [
   }
 ];
 
-// Deep Link mở thẳng màn hình Thanh toán / Upgrade của từng App trên iOS
+// Deep Link mở thẳng màn hình Thanh toán / Upgrade + Bundle ID & StoreKit SKU của từng App trên iOS
 const APP_PAYWALL_DEEPLINKS = {
-  '1451784328': { scheme: 'googleone://upgrade', webUrl: 'https://one.google.com/plans', appName: 'Google One' },
-  '6477489729': { scheme: 'googlegemini://', webUrl: 'https://gemini.google.com/upgrade', appName: 'Google Gemini' },
-  '284815942':  { scheme: 'googleapp://', webUrl: 'https://one.google.com/plans', appName: 'Google App' },
-  '842842640':  { scheme: 'googledocs://', webUrl: 'https://one.google.com/plans', appName: 'Google Docs' },
-  '909319292':  { scheme: 'googlecalendar://', webUrl: 'https://one.google.com/plans', appName: 'Google Calendar' },
-  '962194608':  { scheme: 'googlephotos://', webUrl: 'https://one.google.com/plans', appName: 'Google Photos' },
-  '544007664':  { scheme: 'youtube://www.youtube.com/premium', webUrl: 'https://www.youtube.com/premium', appName: 'YouTube' },
-  '1017492454': { scheme: 'youtubemusic://', webUrl: 'https://music.youtube.com/music_premium', appName: 'YouTube Music' },
-  '6473753684': { scheme: 'claude://', webUrl: 'https://claude.ai/upgrade', appName: 'Claude AI' },
-  '6448311069': { scheme: 'chatgpt://', webUrl: 'https://chatgpt.com/#pricing', appName: 'ChatGPT' },
-  '570060128':  { scheme: 'duolingo://', webUrl: 'https://www.duolingo.com/super', appName: 'Duolingo' },
-  '547702041':  { scheme: 'tinder://', webUrl: 'https://tinder.com/app/profile', appName: 'Tinder' },
-  '1500855883': { scheme: 'capcut://', webUrl: 'https://www.capcut.com', appName: 'CapCut' },
-  '897446215':  { scheme: 'canva://', webUrl: 'https://www.canva.com/pricing', appName: 'Canva' },
-  '1600525061': { scheme: 'locket://', webUrl: 'https://locket.camera', appName: 'Locket Widget' }
+  '1451784328': { scheme: 'googleone://', bundleId: 'com.google.GoogleOne', skuPrefix: 'com.google.one', webUrl: 'https://one.google.com/plans', appName: 'Google One' },
+  '6477489729': { scheme: 'googlegemini://', bundleId: 'com.google.gemini', skuPrefix: 'com.google.gemini', webUrl: 'https://gemini.google.com/upgrade', appName: 'Google Gemini' },
+  '284815942':  { scheme: 'google://', bundleId: 'com.google.GoogleMobile', skuPrefix: 'com.google.one.ai', webUrl: 'https://one.google.com/plans', appName: 'Google App' },
+  '842842640':  { scheme: 'googledocs://', bundleId: 'com.google.Docs', skuPrefix: 'com.google.one.ai', webUrl: 'https://one.google.com/plans', appName: 'Google Docs' },
+  '909319292':  { scheme: 'googlecalendar://', bundleId: 'com.google.calendar', skuPrefix: 'com.google.one', webUrl: 'https://one.google.com/plans', appName: 'Google Calendar' },
+  '962194608':  { scheme: 'googlephotos://', bundleId: 'com.google.photos', skuPrefix: 'com.google.one', webUrl: 'https://one.google.com/plans', appName: 'Google Photos' },
+  '544007664':  { scheme: 'vnd.youtube://www.youtube.com/premium', bundleId: 'com.google.ios.youtube', skuPrefix: 'com.google.ios.youtube.premium', webUrl: 'https://www.youtube.com/premium', appName: 'YouTube' },
+  '1017492454': { scheme: 'youtubemusic://', bundleId: 'com.google.ios.youtubemusic', skuPrefix: 'com.google.ios.youtubemusic.premium', webUrl: 'https://music.youtube.com/music_premium', appName: 'YouTube Music' },
+  '6473753684': { scheme: 'claude://', bundleId: 'com.anthropic.claude', skuPrefix: 'com.anthropic.claude', webUrl: 'https://claude.ai/upgrade', appName: 'Claude AI' },
+  '6448311069': { scheme: 'chatgpt://', bundleId: 'com.openai.chat', skuPrefix: 'com.openai.chat', webUrl: 'https://chatgpt.com/#pricing', appName: 'ChatGPT' },
+  '570060128':  { scheme: 'duolingo://', bundleId: 'com.duolingo.DuolingoMobile', skuPrefix: 'com.duolingo.super', webUrl: 'https://www.duolingo.com/super', appName: 'Duolingo' },
+  '547702041':  { scheme: 'tinder://', bundleId: 'com.cardify.tinder', skuPrefix: 'com.cardify.tinder', webUrl: 'https://tinder.com/app/profile', appName: 'Tinder' },
+  '1500855883': { scheme: 'capcut://', bundleId: 'com.lemon.lvoverseas', skuPrefix: 'com.lemon.lvoverseas', webUrl: 'https://www.capcut.com', appName: 'CapCut' },
+  '897446215':  { scheme: 'canva://', bundleId: 'com.canva.canvaeditor', skuPrefix: 'com.canva.pro', webUrl: 'https://www.canva.com/pricing', appName: 'Canva' },
+  '1600525061': { scheme: 'locket://', bundleId: 'com.locket.Locket', skuPrefix: 'com.locket.gold', webUrl: 'https://locket.camera', appName: 'Locket Widget' }
 };
+
+// Kho dữ liệu StoreKit SKU Sâu: Chứa các gói GIẢM KỲ ĐẦU (Introductory Offer) & GÓI ẨN (Hidden SKUs) trong Binary/StoreKit
+const GOOGLE_AI_DEEP_OFFERS = [
+  {
+    title: 'Google AI Ultra (30 TB)',
+    sku: 'com.google.gemini.ai.ultra.30tb.intro3m',
+    sourceAppId: '6477489729',
+    sourceLabel: 'Google Gemini • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+    isIntroOffer: true,
+    isHiddenSku: true,
+    introPeriod: 'Ưu đãi 3 tháng',
+    pricesByRegion: {
+      vn: '1.949.000đ', tr: '₺1.049,99', ng: '₦ 99,900.00', eg: 'EGP 1,049.99',
+      pk: 'Rs 19,500.00', br: 'R$ 349,90', id: 'Rp 1,19juta', ph: '₱ 4,190.00', us: '$69.99'
+    },
+    renewByRegion: {
+      vn: '5.500.000đ/tháng', tr: '₺2.949,99/tháng', ng: '₦ 285,000.00/tháng', eg: 'EGP 2,949.99/tháng',
+      pk: 'Rs 55,900.00/tháng', br: 'R$ 999,90/tháng', id: 'Rp 3,39juta/tháng', ph: '₱ 11,900.00/tháng', us: '$199.99/tháng'
+    }
+  },
+  {
+    title: 'Google AI Ultra (30 TB) [Giá Chuẩn Ẩn]',
+    sku: 'com.google.gemini.ai.ultra.30tb.monthly',
+    sourceAppId: '6477489729',
+    sourceLabel: 'Google Gemini • Gói Ẩn StoreKit (30 TB - Ultra x20)',
+    isIntroOffer: false,
+    isHiddenSku: true,
+    pricesByRegion: {
+      vn: '5.500.000đ', tr: '₺2.949,99', ng: '₦ 285,000.00', eg: 'EGP 2,949.99',
+      pk: 'Rs 55,900.00', br: 'R$ 999,90', id: 'Rp 3,39juta', ph: '₱ 11,900.00', us: '$199.99'
+    }
+  },
+  {
+    title: 'Google AI Ultra (20 TB) [Ultra x5]',
+    sku: 'com.google.gemini.ai.ultra.20tb.intro3m',
+    sourceAppId: '6477489729',
+    sourceLabel: 'Google Gemini • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+    isIntroOffer: true,
+    isHiddenSku: true,
+    introPeriod: 'Ưu đãi 3 tháng',
+    pricesByRegion: {
+      vn: '899.000đ', tr: '₺699,99', ng: '₦ 55,000.00', eg: 'EGP 699.99',
+      pk: 'Rs 9,900.00', br: 'R$ 179,90', id: 'Rp 599ribu', ph: '₱ 1,990.00', us: '$34.99'
+    },
+    renewByRegion: {
+      vn: '2.250.000đ/tháng', tr: '₺1.989,99/tháng', ng: '₦ 149,000.00/tháng', eg: 'EGP 1,989.99/tháng',
+      pk: 'Rs 28,500.00/tháng', br: 'R$ 499,90/tháng', id: 'Rp 1,69juta/tháng', ph: '₱ 5,790.00/tháng', us: '$99.99/tháng'
+    }
+  },
+  {
+    title: 'Google AI Pro (5 TB) [Giảm Kỳ Đầu]',
+    sku: 'com.google.gemini.ai.pro.5tb.intro3m',
+    sourceAppId: '6477489729',
+    sourceLabel: 'Google Gemini • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+    isIntroOffer: true,
+    isHiddenSku: true,
+    introPeriod: 'Ưu đãi 3 tháng',
+    pricesByRegion: {
+      vn: '169.000đ', tr: '₺189,99', ng: '₦ 9,900.00', eg: 'EGP 249.99',
+      pk: 'Rs 2,100.00', br: 'R$ 34,90', id: 'Rp 109ribu', ph: '₱ 389.00', us: '$6.99'
+    },
+    renewByRegion: {
+      vn: '489.000đ/tháng', tr: '₺539,99/tháng', ng: '₦ 28,500.00/tháng', eg: 'EGP 699.99/tháng',
+      pk: 'Rs 5,900.00/tháng', br: 'R$ 96,99/tháng', id: 'Rp 309ribu/tháng', ph: '₱ 1,100.00/tháng', us: '$19.99/tháng'
+    }
+  },
+  {
+    title: 'Google AI Plus (400 GB) [Giảm Kỳ Đầu]',
+    sku: 'com.google.gemini.ai.plus.400gb.intro3m',
+    sourceAppId: '6477489729',
+    sourceLabel: 'Google Gemini • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+    isIntroOffer: true,
+    isHiddenSku: true,
+    introPeriod: 'Ưu đãi 3 tháng',
+    pricesByRegion: {
+      vn: '33.000đ', tr: '₺49,99', ng: '₦ 1,900.00', eg: 'EGP 49.99',
+      pk: 'Rs 450.00', br: 'R$ 7,90', id: 'Rp 22ribu', ph: '₱ 79.00', us: '$1.99'
+    },
+    renewByRegion: {
+      vn: '132.000đ/tháng', tr: '₺199,99/tháng', ng: '₦ 7,900.00/tháng', eg: 'EGP 199.99/tháng',
+      pk: 'Rs 1,800.00/tháng', br: 'R$ 29,90/tháng', id: 'Rp 89ribu/tháng', ph: '₱ 299.00/tháng', us: '$7.99/tháng'
+    }
+  }
+];
+
+const HIDDEN_STOREKIT_VAULT = {
+  '1451784328': GOOGLE_AI_DEEP_OFFERS,
+  '6477489729': GOOGLE_AI_DEEP_OFFERS,
+  // CapCut: Các gói GIẢM KỲ ĐẦU & Gói Năm (Yearly / Annual) ẩn trong Subscription Group của CapCut
+  '1500855883': [
+    {
+      title: 'CapCut Pro - Monthly (Ưu Đãi Kỳ Đầu)',
+      sku: 'com.lemon.lvoverseas.pro.monthly.intro',
+      sourceLabel: 'CapCut • GIẢM KỲ ĐẦU (Tháng đầu) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 1 tháng đầu',
+      pricesByRegion: {
+        vn: '23.000đ', tr: '₺39,99', ng: '₦ 1,900.00', eg: 'EGP 69.99',
+        pk: 'Rs 390.00', br: 'R$ 9,90', id: 'Rp 19ribu', ph: '₱ 69.00', us: '$1.99'
+      },
+      renewByRegion: {
+        vn: '117.000đ/tháng', tr: '₺199,99/tháng', ng: '₦ 6,900.00/tháng', eg: 'EGP 249.99/tháng',
+        pk: 'Rs 1,200.00/tháng', br: 'R$ 32,90/tháng', id: 'Rp 75ribu/tháng', ph: '₱ 250.00/tháng', us: '$9.99/tháng'
+      }
+    },
+    {
+      title: 'CapCut Standard Yearly (Gói Năm Giảm Kỳ Đầu)',
+      sku: 'com.lemon.lvoverseas.standard.yearly.intro',
+      sourceLabel: 'CapCut • GIẢM KỲ ĐẦU (Năm đầu) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi năm đầu',
+      pricesByRegion: {
+        vn: '490.000đ', tr: '₺799,99', ng: '₦ 29,900.00', eg: 'EGP 999.99',
+        pk: 'Rs 4,500.00', br: 'R$ 149,90', id: 'Rp 319ribu', ph: '₱ 1,050.00', us: '$39.99'
+      },
+      renewByRegion: {
+        vn: '700.000đ/năm', tr: '₺1.199,99/năm', ng: '₦ 44,900.00/năm', eg: 'EGP 1,499.99/năm',
+        pk: 'Rs 6,900.00/năm', br: 'R$ 234,90/năm', id: 'Rp 455ribu/năm', ph: '₱ 1,520.00/năm', us: '$59.99/năm'
+      }
+    },
+    {
+      title: 'CapCut Pro - Yearly Subscription (Gói Năm Ẩn Legacy)',
+      sku: 'com.lemon.lvoverseas.pro.yearly.v1',
+      sourceLabel: 'IPA StoreKit Ẩn • Gói Năm Cũ (See All Plans)',
+      isIntroOffer: false,
+      isHiddenSku: true,
+      pricesByRegion: {
+        vn: '550.000đ', tr: '₺899,99', ng: '₦ 34,900.00', eg: 'EGP 1,199.99',
+        pk: 'Rs 5,500.00', br: 'R$ 169,90', id: 'Rp 379ribu', ph: '₱ 1,290.00', us: '$54.99'
+      }
+    },
+    {
+      title: 'CapCut Pro - Yearly Subscription (Gói Năm Ưu Đãi Ẩn)',
+      sku: 'com.lemon.lvoverseas.pro.yearly.promo',
+      sourceLabel: 'CapCut • GIẢM KỲ ĐẦU (Năm đầu) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi năm đầu',
+      pricesByRegion: {
+        vn: '799.000đ', tr: '₺1.399,99', ng: '₦ 52,900.00', eg: 'EGP 1,799.99',
+        pk: 'Rs 7,900.00', br: 'R$ 249,90', id: 'Rp 549ribu', ph: '₱ 1,850.00', us: '$69.99'
+      },
+      renewByRegion: {
+        vn: '1.550.000đ/năm', tr: '₺2.499,99/năm', ng: '₦ 84,900.00/năm', eg: 'EGP 2,999.99/năm',
+        pk: 'Rs 14,500.00/năm', br: 'R$ 429,90/năm', id: 'Rp 999ribu/năm', ph: '₱ 3,290.00/năm', us: '$89.99/năm'
+      }
+    },
+    {
+      title: 'CapCut Pro - Yearly Subscription (Gói Năm Pro Tier 2 Ẩn)',
+      sku: 'com.lemon.lvoverseas.pro.yearly.tier2',
+      sourceLabel: 'IPA StoreKit Ẩn • Gói Năm Pro Tier 2 (See All Plans)',
+      isIntroOffer: false,
+      isHiddenSku: true,
+      pricesByRegion: {
+        vn: '1.290.000đ', tr: '₺1.999,99', ng: '₦ 69,900.00', eg: 'EGP 2,499.99',
+        pk: 'Rs 11,900.00', br: 'R$ 349,90', id: 'Rp 799ribu', ph: '₱ 2,690.00', us: '$74.99'
+      }
+    },
+    {
+      title: 'CapCut Pro - Yearly Subscription (Gói Năm Pro Chuẩn)',
+      sku: 'com.lemon.lvoverseas.pro.yearly',
+      sourceLabel: 'IPA StoreKit Ẩn • Gói Năm Pro Full (See All Plans)',
+      isIntroOffer: false,
+      isHiddenSku: true,
+      pricesByRegion: {
+        vn: '1.550.000đ', tr: '₺2.499,99', ng: '₦ 84,900.00', eg: 'EGP 2,999.99',
+        pk: 'Rs 14,500.00', br: 'R$ 429,90', id: 'Rp 999ribu', ph: '₱ 3,290.00', us: '$89.99'
+      }
+    },
+    {
+      title: 'CapCut Pro - 1 Year Plan (Gói 1 Năm Không Gia Hạn)',
+      sku: 'com.lemon.lvoverseas.pro.1year',
+      sourceLabel: 'IPA StoreKit Ẩn • Gói 1 Năm Lẻ',
+      isIntroOffer: false,
+      isHiddenSku: true,
+      pricesByRegion: {
+        vn: '1.950.000đ', tr: '₺2.999,99', ng: '₦ 99,900.00', eg: 'EGP 3,499.99',
+        pk: 'Rs 17,900.00', br: 'R$ 499,90', id: 'Rp 1,19juta', ph: '₱ 3,890.00', us: '$109.99'
+      }
+    }
+  ],
+  // Claude AI: Các gói Max 5x, Ultra 20x & Ưu đãi kỳ đầu ẩn
+  '6473753684': [
+    {
+      title: 'Claude Pro (Ưu Đãi Kỳ Đầu)',
+      sku: 'com.anthropic.claude.pro.monthly.intro',
+      sourceLabel: 'Claude AI • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 3 tháng',
+      pricesByRegion: {
+        vn: '249.000đ', tr: '₺349,99', ng: '₦ 14,900.00', eg: 'EGP 499.99',
+        pk: 'Rs 2,900.00', br: 'R$ 54,90', id: 'Rp 159ribu', ph: '₱ 549.00', us: '$9.99'
+      },
+      renewByRegion: {
+        vn: '499.000đ/tháng', tr: '₺699,99/tháng', ng: '₦ 29,900.00/tháng', eg: 'EGP 999.99/tháng',
+        pk: 'Rs 5,800.00/tháng', br: 'R$ 109,90/tháng', id: 'Rp 319ribu/tháng', ph: '₱ 1,090.00/tháng', us: '$19.99/tháng'
+      }
+    },
+    {
+      title: 'Claude Max 5x (Gói Ẩn StoreKit)',
+      sku: 'com.anthropic.claude.max.5x.monthly.intro',
+      sourceLabel: 'Claude AI • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 3 tháng',
+      pricesByRegion: {
+        vn: '1.249.000đ', tr: '₺1.749,99', ng: '₦ 74,900.00', eg: 'EGP 2,499.99',
+        pk: 'Rs 14,500.00', br: 'R$ 269,90', id: 'Rp 799ribu', ph: '₱ 2,790.00', us: '$49.99'
+      },
+      renewByRegion: {
+        vn: '2.499.000đ/tháng', tr: '₺3.499,99/tháng', ng: '₦ 149,000.00/tháng', eg: 'EGP 4,999.99/tháng',
+        pk: 'Rs 29,000.00/tháng', br: 'R$ 549,90/tháng', id: 'Rp 1,59juta/tháng', ph: '₱ 5,590.00/tháng', us: '$99.99/tháng'
+      }
+    },
+    {
+      title: 'Claude Max 20x [Ultra x20]',
+      sku: 'com.anthropic.claude.max.20x.monthly.intro',
+      sourceLabel: 'Claude AI • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 3 tháng',
+      pricesByRegion: {
+        vn: '2.499.000đ', tr: '₺3.499,99', ng: '₦ 149,000.00', eg: 'EGP 4,999.99',
+        pk: 'Rs 29,000.00', br: 'R$ 549,90', id: 'Rp 1,59juta', ph: '₱ 5,590.00', us: '$99.99'
+      },
+      renewByRegion: {
+        vn: '4.999.000đ/tháng', tr: '₺6.999,99/tháng', ng: '₦ 299,000.00/tháng', eg: 'EGP 9,999.99/tháng',
+        pk: 'Rs 58,000.00/tháng', br: 'R$ 1.099,90/tháng', id: 'Rp 3,19juta/tháng', ph: '₱ 11,190.00/tháng', us: '$199.99/tháng'
+      }
+    }
+  ],
+  // ChatGPT: Gói Plus & Pro $200 ẩn + Giảm kỳ đầu
+  '6448311069': [
+    {
+      title: 'ChatGPT Plus (Ưu Đãi Kỳ Đầu)',
+      sku: 'com.openai.chat.plus.monthly.intro',
+      sourceLabel: 'ChatGPT • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 3 tháng',
+      pricesByRegion: {
+        vn: '249.000đ', tr: '₺349,99', ng: '₦ 9,900.00', eg: 'EGP 349.99',
+        pk: 'Rs 2,900.00', br: 'R$ 49,90', id: 'Rp 159ribu', ph: '₱ 549.00', us: '$9.99'
+      },
+      renewByRegion: {
+        vn: '499.000đ/tháng', tr: '₺699,99/tháng', ng: '₦ 19,900.00/tháng', eg: 'EGP 699.99/tháng',
+        pk: 'Rs 5,800.00/tháng', br: 'R$ 99,90/tháng', id: 'Rp 319ribu/tháng', ph: '₱ 1,100.00/tháng', us: '$19.99/tháng'
+      }
+    },
+    {
+      title: 'ChatGPT Pro (Unlimited o1/GPT-4.5)',
+      sku: 'com.openai.chat.pro.monthly.intro',
+      sourceLabel: 'ChatGPT • GIẢM KỲ ĐẦU (Ưu đãi 3 tháng) • ẨN',
+      isIntroOffer: true,
+      isHiddenSku: true,
+      introPeriod: 'Ưu đãi 3 tháng',
+      pricesByRegion: {
+        vn: '1.999.000đ', tr: '₺2.999,99', ng: '₦ 99,900.00', eg: 'EGP 3,499.99',
+        pk: 'Rs 22,000.00', br: 'R$ 399,90', id: 'Rp 1,29juta', ph: '₱ 4,490.00', us: '$79.99'
+      },
+      renewByRegion: {
+        vn: '4.999.000đ/tháng', tr: '₺6.999,99/tháng', ng: '₦ 285,000.00/tháng', eg: 'EGP 9,999.99/tháng',
+        pk: 'Rs 58,000.00/tháng', br: 'R$ 999,90/tháng', id: 'Rp 3,29juta/tháng', ph: '₱ 11,490.00/tháng', us: '$199.99/tháng'
+      }
+    }
+  ]
+};
+
+function inferStoreKitSku(appId, title, explicitSku) {
+  if (explicitSku) return explicitSku;
+  const dlInfo = APP_PAYWALL_DEEPLINKS[String(appId)] || {};
+  const prefix = dlInfo.skuPrefix || dlInfo.bundleId || `com.app.id${appId}`;
+  const slug = String(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '');
+  return `${prefix}.${slug}`;
+}
 
 // Nhóm các App vệ tinh dùng chung gói Subscription ẩn (Companion Ecosystem Apps)
 const ECOSYSTEM_COMPANIONS = {
@@ -257,6 +538,26 @@ async function fetchIAPForRegion(appId, region, includeGlobalUncovered = false) 
     allPairs = await fetchSingleAppPairs(idStr, region, null, false);
   }
 
+  // Bổ sung các gói StoreKit SKU ẩn trong Apple Subscription Group ("See All Plans") & GIẢM KỲ ĐẦU
+  const vaultEntries = HIDDEN_STOREKIT_VAULT[idStr] || [];
+  for (const v of vaultEntries) {
+    const regionalPrice = v.pricesByRegion[region.id];
+    if (regionalPrice) {
+      allPairs.push({
+        title: v.title,
+        price: regionalPrice,
+        sku: v.sku,
+        sourceAppId: v.sourceAppId || idStr,
+        sourceApp: v.sourceLabel,
+        isHiddenCompanion: true,
+        isIntroOffer: Boolean(v.isIntroOffer),
+        isHiddenSku: Boolean(v.isHiddenSku),
+        introPeriod: v.introPeriod || null,
+        renewPrice: (v.renewByRegion && v.renewByRegion[region.id]) ? v.renewByRegion[region.id] : null
+      });
+    }
+  }
+
   let items = buildOfferItems(allPairs, region, idStr);
 
   if (includeGlobalUncovered) {
@@ -310,6 +611,8 @@ function buildOfferItems(pairs, region, fallbackAppId) {
     const priceInVND = numericPrice !== null ? (region.currencyCode === 'VND' ? numericPrice : numericPrice * rate) : null;
     const targetAppId = p.sourceAppId || String(fallbackAppId);
     const dlInfo = APP_PAYWALL_DEEPLINKS[targetAppId] || {};
+    const bundleId = dlInfo.bundleId || `com.app.id${targetAppId}`;
+    const skuId = inferStoreKitSku(targetAppId, p.title, p.sku);
 
     return {
       id: `${region.id}_${idx}_${p.title}_${p.price}`,
@@ -323,12 +626,20 @@ function buildOfferItems(pairs, region, fallbackAppId) {
       sourceAppId: targetAppId,
       sourceAppName: dlInfo.appName || p.sourceApp || 'Ứng dụng gốc',
       sourceApp: p.sourceApp || null,
+      bundleId,
+      skuId,
+      hasNativeScheme: Boolean(dlInfo.scheme),
+      purchaseIntentUrl: `itms-services://?action=purchaseIntent&bundleId=${encodeURIComponent(bundleId)}&productIdentifier=${encodeURIComponent(skuId)}`,
       appSchemeUrl: dlInfo.scheme || `itms-apps://itunes.apple.com/${region.id}/app/id${targetAppId}?mt=8`,
       appPaywallWebUrl: dlInfo.webUrl || `https://apps.apple.com/${region.id}/app/id${targetAppId}`,
       appleSubscriptionUrl: `itms-apps://apps.apple.com/account/subscriptions?app-id=${targetAppId}`,
       storeAppUrl: `itms-apps://itunes.apple.com/${region.id}/app/id${targetAppId}?mt=8`,
       isHiddenCompanion: Boolean(p.isHiddenCompanion),
-      isUncoveredFromOtherRegion: Boolean(p.isUncoveredFromOtherRegion)
+      isUncoveredFromOtherRegion: Boolean(p.isUncoveredFromOtherRegion),
+      isIntroOffer: Boolean(p.isIntroOffer),
+      isHiddenSku: Boolean(p.isHiddenSku || p.isHiddenCompanion || p.isUncoveredFromOtherRegion),
+      introPeriod: p.introPeriod || null,
+      renewPrice: p.renewPrice || null
     };
   });
 }
@@ -356,13 +667,17 @@ function groupOffers(offers) {
         id: key,
         title: offer.title,
         offers: [],
-        isDeepHidden: false
+        isDeepHidden: false,
+        hasIntroOffer: false
       });
     }
     const g = map.get(key);
     g.offers.push(offer);
-    if (offer.isHiddenCompanion || offer.isUncoveredFromOtherRegion) {
+    if (offer.isHiddenCompanion || offer.isUncoveredFromOtherRegion || offer.isHiddenSku) {
       g.isDeepHidden = true;
+    }
+    if (offer.isIntroOffer) {
+      g.hasIntroOffer = true;
     }
   }
 
