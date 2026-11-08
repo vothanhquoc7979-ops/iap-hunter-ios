@@ -15,6 +15,7 @@ struct AppIAPDetailView: View {
     @State private var isLoadingSingle = false
     @State private var singleError: String?
     @State private var groupSameNameOffers = true
+    @State private var showOnlyHiddenOffers = false
 
     // Multi-region comparison state
     @State private var multiRegionResults: [RegionIAPScanResult] = []
@@ -189,7 +190,8 @@ struct AppIAPDetailView: View {
             } else {
                 // Summary Banner
                 let groups = iapService.groupOffersByTitle(regionOffers)
-                let hiddenTierGroupsCount = groups.filter { $0.hasHiddenPriceTiers }.count
+                let hiddenTierGroups = groups.filter { $0.hasHiddenPriceTiers }
+                let hiddenTierGroupsCount = hiddenTierGroups.count
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -197,8 +199,8 @@ struct AppIAPDetailView: View {
                             Text("Tìm thấy \(regionOffers.count) gói IAP (\(groups.count) nhóm gói)")
                                 .font(.subheadline.weight(.bold))
                             if hiddenTierGroupsCount > 0 {
-                                Text("Phát hiện \(hiddenTierGroupsCount) gói có nhiều mức giá ẩn (A/B Testing) chênh lệch nhau!")
-                                    .font(.caption)
+                                Text("Phát hiện \(hiddenTierGroupsCount) gói có Offer Ẩn (A/B Testing) rẻ hơn giá gốc!")
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(.green)
                             } else {
                                 Text("Hiển thị đầy đủ giá gốc và quy đổi VNĐ")
@@ -210,14 +212,25 @@ struct AppIAPDetailView: View {
                         Toggle("Gom nhóm", isOn: $groupSameNameOffers)
                             .labelsHidden()
                     }
+
+                    if hiddenTierGroupsCount > 0 {
+                        Divider()
+                        Toggle(isOn: $showOnlyHiddenOffers) {
+                            Label("Chỉ hiển thị các gói có Offer Ẩn giá rẻ", systemImage: "eye.trianglebadge.exclamationmark.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
                 .padding()
                 .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .padding(.horizontal)
 
+                let displayedGroups = showOnlyHiddenOffers ? hiddenTierGroups : groups
+
                 if groupSameNameOffers {
-                    ForEach(groups) { group in
+                    ForEach(displayedGroups) { group in
                         offerGroupCard(group)
                     }
                 } else {
