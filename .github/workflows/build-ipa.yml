@@ -1,0 +1,45 @@
+name: Build iOS IPA (Sideloadly / TrollStore)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Generate Xcode Project with XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+
+      - name: Build Unsigned iOS App
+        run: |
+          xcodebuild clean build \
+            -project IAPHunter.xcodeproj \
+            -scheme IAPHunter \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package into .ipa for Sideloadly / TrollStore
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/IAPHunter.app Payload/
+          zip -r9 IAPHunter-Unsigned.ipa Payload
+
+      - name: Upload IAPHunter.ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IAPHunter-IPA
+          path: IAPHunter-Unsigned.ipa
+          if-no-files-found: error

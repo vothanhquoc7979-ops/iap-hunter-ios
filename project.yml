@@ -1,0 +1,32 @@
+name: IAPHunter
+options:
+  bundleIdPrefix: com.personal
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  IAPHunter:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: IAPHunter
+        excludes:
+          - "Info.plist"
+    info:
+      path: IAPHunter/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.personal.iaphunter
+        PRODUCT_NAME: IAPHunter
+        INFOPLIST_FILE: IAPHunter/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - sdk: StoreKit.framework
