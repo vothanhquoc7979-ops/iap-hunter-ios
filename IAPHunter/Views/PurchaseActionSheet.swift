@@ -220,6 +220,12 @@ struct PurchaseActionSheet: View {
                     Button("Đóng") { dismiss() }
                 }
             }
+            .task {
+                // Tự động chạy ngầm: đồng bộ vùng của Offer & mở cổng thanh toán của đúng App chứa gói ẩn
+                CurrencyService.shared.switchRegionAndCopyBilling(offer.region)
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                openAppleSubscriptionsDeepLink()
+            }
         }
     }
 
@@ -241,8 +247,16 @@ struct PurchaseActionSheet: View {
         }
     }
 
+    private var targetAppId: Int {
+        offer.sourceAppId ?? app.trackId
+    }
+
+    private var targetAppDisplayName: String {
+        offer.sourceAppName ?? app.trackName
+    }
+
     private func openAppleSubscriptionsDeepLink() {
-        if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+        if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions?app-id=\(targetAppId)") {
             openURL(url)
         } else if let webUrl = URL(string: "https://apps.apple.com/account/subscriptions") {
             openURL(webUrl)
@@ -250,9 +264,9 @@ struct PurchaseActionSheet: View {
     }
 
     private func openAppStoreForRegion() {
-        if let url = URL(string: "itms-apps://itunes.apple.com/\(offer.region.id)/app/id\(app.trackId)?mt=8") {
+        if let url = URL(string: "itms-apps://itunes.apple.com/\(offer.region.id)/app/id\(targetAppId)?mt=8") {
             openURL(url)
-        } else if let webUrl = URL(string: "https://apps.apple.com/\(offer.region.id)/app/id\(app.trackId)") {
+        } else if let webUrl = URL(string: "https://apps.apple.com/\(offer.region.id)/app/id\(targetAppId)") {
             openURL(webUrl)
         }
     }

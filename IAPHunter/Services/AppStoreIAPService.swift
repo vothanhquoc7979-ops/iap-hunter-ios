@@ -128,52 +128,85 @@ final class AppStoreIAPService: ObservableObject {
     func fetchIAPOffers(appId: Int, region: StorefrontRegion) async throws -> [IAPOfferItem] {
         await CurrencyService.shared.refreshRatesIfNeeded()
 
-        var rawPairs: [(title: String, price: String)] = []
+        struct RawCompanionPair {
+            let title: String
+            let price: String
+            let sourceAppId: Int
+            let sourceAppName: String?
+            let customRegion: StorefrontRegion?
+        }
+
+        var rawList: [RawCompanionPair] = []
 
         // Gộp tự động hệ sinh thái Google (Google One + Gemini + Google App + Docs + Calendar) để lôi ra toàn bộ gói ẩn AI Pro (5TB), AI Ultra x5 (20TB), AI Ultra x20 (30TB), 30GB
         if appId == 1451784328 || appId == 6477489729 || appId == 284815942 {
-            let companionIds = [6477489729, 284815942, 1451784328, 842842640, 909319292]
-            for cid in companionIds {
-                if let p = try? await fetchSingleAppRawPairs(appId: cid, region: region) {
-                    rawPairs.append(contentsOf: p)
+            let companions: [(id: Int, name: String)] = [
+                (6477489729, "Google Gemini"),
+                (284815942, "Google App (Chứa AI Ultra x5 & x20)"),
+                (1451784328, "Google One"),
+                (842842640, "Google Docs (Chứa AI Pro 5TB Năm)"),
+                (909319292, "Google Calendar")
+            ]
+            for comp in companions {
+                if let pairs = try? await fetchSingleAppRawPairs(appId: comp.id, region: region) {
+                    for p in pairs {
+                        rawList.append(RawCompanionPair(title: p.title, price: p.price, sourceAppId: comp.id, sourceAppName: comp.name, customRegion: nil))
+                    }
                 }
             }
             // Nếu vùng hiện tại (như VN) ẩn gói AI Ultra x5 (20TB) và x20 (30TB) khỏi Top 10, tự động quét chéo sang TR để lôi ra
             if region.id != "tr", let trRegion = StorefrontRegion.supportedRegions.first(where: { $0.id == "tr" }) {
                 if let trUltraPairs = try? await fetchSingleAppRawPairs(appId: 284815942, region: trRegion) {
-                    let existingNames = Set(rawPairs.map { normalizeTitle($0.title, appId: appId).lowercased() })
+                    let existingNames = Set(rawList.map { normalizeTitle($0.title, appId: appId).lowercased() })
                     for pair in trUltraPairs {
                         let norm = normalizeTitle(pair.title, appId: appId)
                         if !existingNames.contains(norm.lowercased()) {
-                            rawPairs.append((title: "\(norm) [Ẩn tại Store VN • Mở ở TR]", price: pair.price))
+                            rawList.append(RawCompanionPair(
+                                title: norm,
+                                price: pair.price,
+                                sourceAppId: 284815942,
+                                sourceAppName: "Google App • Mở ở Store 🇹🇷 TR",
+                                customRegion: trRegion
+                            ))
                         }
                     }
                 }
             }
         } else if appId == 544007664 {
-            // Gộp YouTube + YouTube Music (chứa gói Family ẩn 139k)
-            for cid in [544007664, 1017492454] {
-                if let p = try? await fetchSingleAppRawPairs(appId: cid, region: region) {
-                    rawPairs.append(contentsOf: p)
+            let companions: [(id: Int, name: String)] = [
+                (544007664, "YouTube"),
+                (1017492454, "YouTube Music (Chứa Family 139k)")
+            ]
+            for comp in companions {
+                if let pairs = try? await fetchSingleAppRawPairs(appId: comp.id, region: region) {
+                    for p in pairs {
+                        rawList.append(RawCompanionPair(title: p.title, price: p.price, sourceAppId: comp.id, sourceAppName: comp.name, customRegion: nil))
+                    }
                 }
             }
         } else {
-            rawPairs = try await fetchSingleAppRawPairs(appId: appId, region: region)
+            let pairs = try await fetchSingleAppRawPairs(appId: appId, region: region)
+            for p in pairs {
+                rawList.append(RawCompanionPair(title: p.title, price: p.price, sourceAppId: appId, sourceAppName: nil, customRegion: nil))
+            }
         }
 
         var results: [IAPOfferItem] = []
 
-        for (index, pair) in rawPairs.enumerated() {
-            let normalizedTitle = normalizeTitle(pair.title, appId: appId)
-            let numeric = CurrencyService.shared.parseNumericPrice(from: pair.price, region: region)
-            let vnd = CurrencyService.shared.convertToVND(numericPrice: numeric, region: region)
+        for (index, itemPair) in rawList.enumerated() {
+            let effectiveRegion = itemPair.customRegion ?? region
+            let normalizedTitle = normalizeTitle(itemPair.title, appId: itemPair.sourceAppId)
+            let numeric = CurrencyService.shared.parseNumericPrice(from: itemPair.price, region: effectiveRegion)
+            let vnd = CurrencyService.shared.convertToVND(numericPrice: numeric, region: effectiveRegion)
             let item = IAPOfferItem(
                 title: normalizedTitle,
-                rawPrice: pair.price,
+                rawPrice: itemPair.price,
                 numericPrice: numeric,
                 priceInVND: vnd,
-                region: region,
-                rankIndex: index + 1
+                region: effectiveRegion,
+                rankIndex: index + 1,
+                sourceAppId: itemPair.sourceAppId,
+                sourceAppName: itemPair.sourceAppName
             )
             results.append(item)
         }

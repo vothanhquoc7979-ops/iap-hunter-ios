@@ -98,6 +98,8 @@ struct IAPOfferItem: Identifiable, Hashable, Codable {
     let priceInVND: Double?         // Giá quy đổi ra VNĐ
     let region: StorefrontRegion    // Vùng Store tương ứng
     let rankIndex: Int              // Thứ tự xuất hiện trong danh sách IAP của Store
+    let sourceAppId: Int?           // ID của App vệ tinh thực sự chứa gói ẩn này
+    let sourceAppName: String?      // Tên App vệ tinh chứa gói ẩn này
 
     init(
         id: UUID = UUID(),
@@ -106,7 +108,9 @@ struct IAPOfferItem: Identifiable, Hashable, Codable {
         numericPrice: Double?,
         priceInVND: Double?,
         region: StorefrontRegion,
-        rankIndex: Int
+        rankIndex: Int,
+        sourceAppId: Int? = nil,
+        sourceAppName: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -115,6 +119,8 @@ struct IAPOfferItem: Identifiable, Hashable, Codable {
         self.priceInVND = priceInVND
         self.region = region
         self.rankIndex = rankIndex
+        self.sourceAppId = sourceAppId
+        self.sourceAppName = sourceAppName
     }
 
     var formattedVND: String {

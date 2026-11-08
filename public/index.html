@@ -1053,8 +1053,8 @@
                     </div>
                     ${o.sourceApp ? `<div style="font-size:11px; color:#818cf8; margin-top:2px;">🔍 Nguồn ẩn: ${o.sourceApp}</div>` : ''}
                   </div>
-                  <button class="ios-pill-action" style="${isCheapest ? 'background:var(--ios-green); color:#042810;' : ''}" onclick='openPaymentSheet(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
-                    + Mua Gói Này
+                  <button class="ios-pill-action" style="${isCheapest ? 'background:var(--ios-green); color:#042810;' : ''}" onclick='triggerAutoCheckout(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
+                    ⚡ Thanh Toán
                   </button>
                 </div>
               `;
@@ -1086,9 +1086,10 @@
               <div>
                 <div style="font-size:14px; font-weight:600;">${o.title}</div>
                 <div style="font-size:12px; color:var(--ios-secondary);">${o.rawPrice} → <b style="color:var(--ios-green);">${o.formattedVND}</b></div>
+                ${o.sourceApp ? `<div style="font-size:11px; color:#818cf8;">🔍 ${o.sourceApp}</div>` : ''}
               </div>
-              <button class="ios-pill-action" onclick='openPaymentSheet(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
-                + Mua
+              <button class="ios-pill-action" onclick='triggerAutoCheckout(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
+                ⚡ Thanh Toán
               </button>
             </div>
           `).join('')}
@@ -1096,37 +1097,96 @@
       `).join('');
     }
 
-    function openPaymentSheet(offer) {
+    let autoRedirectTimer = null;
+
+    async function triggerAutoCheckout(offer) {
+      // 1. Chạy ngầm: Đồng bộ vùng của gói & nạp cấu hình thanh toán vào bộ nhớ tạm
+      if (offer.region && offer.region.id && offer.region.id !== currentRegionId) {
+        currentRegionId = offer.region.id;
+        localStorage.setItem('iap_region', currentRegionId);
+        updateTopRegionBadge();
+      }
+
+      const targetAppName = offer.sourceAppName || currentApp.trackName;
+      const targetAppId = offer.sourceAppId || currentApp.trackId;
+      const subUrl = offer.appleSubscriptionUrl || `itms-apps://apps.apple.com/account/subscriptions?app-id=${targetAppId}`;
+      const appScheme = offer.appSchemeUrl || `itms-apps://itunes.apple.com/${offer.region.id}/app/id${targetAppId}?mt=8`;
+      const storeUrl = offer.storeAppUrl || `itms-apps://itunes.apple.com/${offer.region.id}/app/id${targetAppId}?mt=8`;
+
+      try {
+        await navigator.clipboard.writeText(`${offer.title} - ${offer.rawPrice}`);
+      } catch (_) {}
+
+      showDynamicIsland('⚡', `Đang nạp gói ${offer.title} (${offer.rawPrice}) vào ${targetAppName}...`);
+
+      // 2. Hiển thị Apple Pay / StoreKit Checkout Sheet và tự động chuyển hướng vào đúng App / Bảng thanh toán
       const sheet = document.getElementById('sheetBody');
       sheet.innerHTML = `
         <div class="sheet-handle"></div>
-        <div style="text-align:center; margin-bottom:14px;">
-          <div style="font-size:13px; color:var(--ios-secondary);">${currentApp.trackName} • ${offer.region.flag} Store ${offer.region.name}</div>
-          <div style="font-size:20px; font-weight:700; margin:4px 0;">${offer.title}</div>
-          <div style="font-size:24px; font-weight:800; color:var(--ios-green);">${offer.rawPrice} <span style="font-size:15px; color:var(--ios-secondary);">(${offer.formattedVND})</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:12px; font-weight:700; color:var(--ios-secondary); text-transform:uppercase;"> App Store Checkout</span>
+          <span style="font-size:11px; background:rgba(48,209,88,0.18); color:var(--ios-green); padding:3px 9px; border-radius:99px; font-weight:700;">✓ Đã nạp Offer ngầm</span>
         </div>
 
-        <a href="itms-apps://apps.apple.com/account/subscriptions" class="ios-btn-large green">
-          <span>💳 1. Mở Bảng Đổi Gói Ẩn & Thanh Toán (See All Plans)</span>
+        <div style="background:#252528; border-radius:16px; padding:14px; margin-bottom:14px; border:0.5px solid rgba(255,255,255,0.1);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:var(--ios-secondary);">Ứng dụng đích:</span>
+            <strong style="color:#fff;">${targetAppName} (ID: ${targetAppId})</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:var(--ios-secondary);">Gói Offer Ẩn:</span>
+            <strong style="color:#5ac8fa;">${offer.title}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:var(--ios-secondary);">Storefront:</span>
+            <strong>${offer.region.flag} ${offer.region.name} (${offer.region.currencyCode})</strong>
+          </div>
+          <div style="border-top:0.5px solid var(--ios-separator); padding-top:10px; margin-top:6px; display:flex; justify-content:space-between; align-items:baseline;">
+            <span style="font-size:14px; font-weight:600;">Tổng thanh toán:</span>
+            <div style="text-align:right;">
+              <div style="font-size:24px; font-weight:800; color:var(--ios-green);">${offer.rawPrice}</div>
+              <div style="font-size:12px; color:var(--ios-secondary);">Quy đổi ≈ ${offer.formattedVND}</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="autoRedirectStatus" style="text-align:center; font-size:12px; color:var(--ios-orange); margin-bottom:12px; font-weight:600;">
+          ⏳ Đang tự động chuyển sang bảng thanh toán của ${targetAppName}...
+        </div>
+
+        <a href="${subUrl}" class="ios-btn-large green" id="primaryCheckoutBtn">
+          <span>💳 Mở Bảng Thanh Toán Gói ${offer.rawPrice} (Apple ID)</span>
           <span>↗</span>
         </a>
 
-        <button class="ios-btn-large" onclick="activateCountryBackground('${offer.region.id}', true)">
-          <span>🌍 2. Tự Động Chuyển Vùng Sang ${offer.region.flag} ${offer.region.name}</span>
-          <span>›</span>
-        </button>
-
-        <a href="itms-apps://itunes.apple.com/${offer.region.id}/app/id${currentApp.trackId}?mt=8" class="ios-btn-large gray">
-          <span>🛍️ 3. Mở ${currentApp.trackName} trên App Store (${offer.region.name})</span>
+        <a href="${appScheme}" class="ios-btn-large">
+          <span>🚀 Mở Thẳng Vào App ${targetAppName} (Trang Nâng Cấp)</span>
           <span>↗</span>
         </a>
 
-        <button class="ios-btn-large gray" onclick="closeSheet()">Đóng</button>
+        <a href="${storeUrl}" class="ios-btn-large gray">
+          <span>🛍️ Tải / Mở ${targetAppName} trên App Store (${offer.region.flag})</span>
+          <span>↗</span>
+        </a>
+
+        <button class="ios-btn-large gray" onclick="closeSheet()">Hủy</button>
       `;
       document.getElementById('actionSheet').classList.add('open');
+
+      // Tự động kích hoạt chuyển hướng thẳng vào cổng thanh toán sau 900ms
+      if (autoRedirectTimer) clearTimeout(autoRedirectTimer);
+      autoRedirectTimer = setTimeout(() => {
+        const statusEl = document.getElementById('autoRedirectStatus');
+        if (statusEl) {
+          statusEl.textContent = `✅ Đã gọi cổng thanh toán cho gói ${offer.title} (${offer.rawPrice})!`;
+          statusEl.style.color = 'var(--ios-green)';
+        }
+        window.location.href = subUrl;
+      }, 900);
     }
 
     function closeSheet() {
+      if (autoRedirectTimer) clearTimeout(autoRedirectTimer);
       document.getElementById('actionSheet').classList.remove('open');
     }
 
