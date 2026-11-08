@@ -115,7 +115,20 @@ function formatVND(vnd) {
   return Math.round(vnd).toLocaleString('vi-VN') + 'đ';
 }
 
-function extractTextPairsFromHTML(html) {
+function normalizeOfferTitle(title, appId) {
+  let t = String(title).trim();
+  // Làm rõ gói x5 và x20 của Claude / AI Ultra
+  if (String(appId) === '6473753684') {
+    if (t.includes('Claude Max') && !t.includes('x5')) {
+      t = t.replace('Claude Max', 'Claude Max (Gói x5)');
+    } else if (t.includes('Claude Ultra') && !t.includes('x20')) {
+      t = t.replace('Claude Ultra', 'Claude Ultra (Gói x20)');
+    }
+  }
+  return t;
+}
+
+function extractTextPairsFromHTML(html, appId) {
   const match = html.match(/<script[^>]*id="serialized-server-data"[^>]*>([\s\S]*?)<\/script>/i);
   if (!match) return [];
   try {
@@ -124,7 +137,10 @@ function extractTextPairsFromHTML(html) {
     function walk(node) {
       if (!node || typeof node !== 'object') return;
       if (node.$kind === 'textPair' && node.leadingText && node.trailingText) {
-        results.push({ title: String(node.leadingText), price: String(node.trailingText) });
+        results.push({
+          title: normalizeOfferTitle(node.leadingText, appId),
+          price: String(node.trailingText)
+        });
         return;
       }
       if (Array.isArray(node)) {
@@ -140,8 +156,7 @@ function extractTextPairsFromHTML(html) {
   }
 }
 
-async function fetchIAPForRegion(appId, region) {
-  await refreshRatesIfNeeded();
+async function fetchSingleAppPairs(appId, region) {
   const url = `https://apps.apple.com/${region.id}/app/id${appId}`;
   const res = await fetch(url, {
     headers: {
@@ -163,13 +178,31 @@ async function fetchIAPForRegion(appId, region) {
         signal: AbortSignal.timeout(12000)
       });
       const html2 = await res2.text();
-      return buildOfferItems(extractTextPairsFromHTML(html2), region);
+      return extractTextPairsFromHTML(html2, appId);
     }
     return [];
   }
 
   const html = await res.text();
-  return buildOfferItems(extractTextPairsFromHTML(html), region);
+  return extractTextPairsFromHTML(html, appId);
+}
+
+async function fetchIAPForRegion(appId, region) {
+  await refreshRatesIfNeeded();
+  const idStr = String(appId);
+
+  // Khi quét Google One (1451784328) hoặc Google Gemini (6477489729),
+  // tự động gộp cả 2 app để lấy đủ cả 100GB, 200GB, AI Plus (400GB/2TB), AI Pro (5TB) và AI Ultra (30TB)!
+  if (idStr === '1451784328' || idStr === '6477489729') {
+    const [geminiPairs, onePairs] = await Promise.all([
+      fetchSingleAppPairs('6477489729', region).catch(() => []),
+      fetchSingleAppPairs('1451784328', region).catch(() => [])
+    ]);
+    return buildOfferItems([...geminiPairs, ...onePairs], region);
+  }
+
+  const pairs = await fetchSingleAppPairs(idStr, region);
+  return buildOfferItems(pairs, region);
 }
 
 function buildOfferItems(pairs, region) {
@@ -188,6 +221,20 @@ function buildOfferItems(pairs, region) {
       rankIndex: idx + 1
     };
   });
+}
+
+function deduplicateOffersForMultiRegion(offers) {
+  const seen = new Set();
+  const unique = [];
+  for (const o of offers) {
+    const key = `${o.title.toLowerCase()}|${o.rawPrice}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(o);
+    }
+  }
+  unique.sort((a, b) => (a.priceInVND ?? Infinity) - (b.priceInVND ?? Infinity));
+  return unique;
 }
 
 function groupOffers(offers) {
@@ -281,7 +328,8 @@ async function handleApi(req, res, parsedUrl) {
     const results = await Promise.all(
       REGIONS.map(async (region) => {
         try {
-          const offers = await fetchIAPForRegion(appId, region);
+          const rawOffers = await fetchIAPForRegion(appId, region);
+          const offers = deduplicateOffersForMultiRegion(rawOffers);
           const cheapest = offers.reduce((min, o) => ((o.priceInVND ?? Infinity) < (min?.priceInVND ?? Infinity) ? o : min), null);
           return { region, offers, cheapest };
         } catch (err) {
@@ -338,7 +386,7 @@ function generateMobileConfig(appUrl) {
         </dict>
     </array>
     <key>PayloadDescription</key>
-    <string>Cài đặt trực tiếp ứng dụng kiểm tra IAP ẩn (Google One, Duolingo, Tinder, CapCut...) và đổi vùng nhanh lên màn hình chính iPhone.</string>
+    <string>Cài đặt trực tiếp ứng dụng kiểm tra IAP ẩn (Google One, AI Pro/Ultra, Claude x5/x20, ChatGPT...) lên màn hình chính iPhone.</string>
     <key>PayloadDisplayName</key>
     <string>IAP Hunter iOS (Kèm Icon Chuẩn)</string>
     <key>PayloadIdentifier</key>

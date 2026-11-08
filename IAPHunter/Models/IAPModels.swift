@@ -198,11 +198,25 @@ struct PresetAppItem: Identifiable {
 
     static let popularApps: [PresetAppItem] = [
         PresetAppItem(
-            id: 1451784328,
-            name: "Google One",
-            subtitle: "100GB, 200GB, 2TB & Google AI Plus đa quốc gia",
+            id: 6477489729,
+            name: "Google One & Gemini AI",
+            subtitle: "Đủ gói 100GB, 200GB, AI Plus, AI Pro (5TB) & AI Ultra (30TB)",
             iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/dc/2e/e5/dc2ee5ef-a9fe-5e46-c268-08152216c862/logo_one_color-0-0-1x_U007emarketing-0-0-0-7-0-0-0-0-85-220.png/256x256bb.jpg",
-            badgeText: "Rẻ hơn 65%"
+            badgeText: "AI Pro 275k (TR) • AI Ultra"
+        ),
+        PresetAppItem(
+            id: 6473753684,
+            name: "Claude by Anthropic",
+            subtitle: "Đủ gói Claude Pro, Claude Max (x5) & Claude Ultra (x20)",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/91/8d/0a/918d0a34-21c5-580f-6038-1b25f0078916/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg",
+            badgeText: "Max x5 • Ultra x20"
+        ),
+        PresetAppItem(
+            id: 6448311069,
+            name: "ChatGPT",
+            subtitle: "ChatGPT Go (109k), Plus, Pro 100, Pro 200 & Pro 500",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0b/2c/4c/0b2c4cd6-9371-3d26-59a8-2a7a1d512008/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/256x256bb.jpg",
+            badgeText: "Go • Plus • Pro"
         ),
         PresetAppItem(
             id: 570060128,
@@ -231,13 +245,6 @@ struct PresetAppItem: Identifiable {
             subtitle: "So sánh gói YouTube Premium & Music 10 nước",
             iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/54/2c/c2/542cc28f-06a7-52b9-3644-b61493f83226/logo_youtube_2024_q4_color-0-1x_U007emarketing-0-0-0-7-0-0-0-85-220-0.png/256x256bb.jpg",
             badgeText: "Đa vùng"
-        ),
-        PresetAppItem(
-            id: 6448311069,
-            name: "ChatGPT",
-            subtitle: "Kiểm tra giá gói ChatGPT Plus các vùng Store",
-            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0b/2c/4c/0b2c4cd6-9371-3d26-59a8-2a7a1d512008/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/256x256bb.jpg",
-            badgeText: "AI Plus"
         ),
         PresetAppItem(
             id: 897446215,

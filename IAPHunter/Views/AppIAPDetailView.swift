@@ -479,7 +479,7 @@ struct AppIAPDetailView: View {
 
                             Divider()
 
-                            ForEach(filteredOffers.prefix(8)) { offer in
+                            ForEach(filteredOffers) { offer in
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(offer.title)
@@ -522,8 +522,17 @@ struct AppIAPDetailView: View {
     // MARK: - Helpers
     private func filtered(offers: [IAPOfferItem]) -> [IAPOfferItem] {
         let kw = filterKeyword.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !kw.isEmpty else { return offers }
-        return offers.filter { $0.title.lowercased().contains(kw) }
+        let base = kw.isEmpty ? offers : offers.filter { $0.title.lowercased().contains(kw) }
+        var seen = Set<String>()
+        var unique: [IAPOfferItem] = []
+        for o in base {
+            let key = "\(o.title.lowercased())|\(o.rawPrice)"
+            if !seen.contains(key) {
+                seen.insert(key)
+                unique.append(o)
+            }
+        }
+        return unique.sorted { ($0.priceInVND ?? .greatestFiniteMagnitude) < ($1.priceInVND ?? .greatestFiniteMagnitude) }
     }
 
     private func findGlobalCheapestOffer() -> IAPOfferItem? {

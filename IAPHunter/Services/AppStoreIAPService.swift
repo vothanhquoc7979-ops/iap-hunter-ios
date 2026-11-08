@@ -128,6 +128,40 @@ final class AppStoreIAPService: ObservableObject {
     func fetchIAPOffers(appId: Int, region: StorefrontRegion) async throws -> [IAPOfferItem] {
         await CurrencyService.shared.refreshRatesIfNeeded()
 
+        var rawPairs: [(title: String, price: String)] = []
+
+        // Gộp tự động Google One (1451784328) + Google Gemini (6477489729) để có đủ 100GB, 200GB, AI Plus, AI Pro (5TB) và AI Ultra (30TB)
+        if appId == 1451784328 || appId == 6477489729 {
+            async let geminiPairs = fetchSingleAppRawPairs(appId: 6477489729, region: region)
+            async let onePairs = fetchSingleAppRawPairs(appId: 1451784328, region: region)
+            let g = (try? await geminiPairs) ?? []
+            let o = (try? await onePairs) ?? []
+            rawPairs = g + o
+        } else {
+            rawPairs = try await fetchSingleAppRawPairs(appId: appId, region: region)
+        }
+
+        var results: [IAPOfferItem] = []
+
+        for (index, pair) in rawPairs.enumerated() {
+            let normalizedTitle = normalizeTitle(pair.title, appId: appId)
+            let numeric = CurrencyService.shared.parseNumericPrice(from: pair.price, region: region)
+            let vnd = CurrencyService.shared.convertToVND(numericPrice: numeric, region: region)
+            let item = IAPOfferItem(
+                title: normalizedTitle,
+                rawPrice: pair.price,
+                numericPrice: numeric,
+                priceInVND: vnd,
+                region: region,
+                rankIndex: index + 1
+            )
+            results.append(item)
+        }
+
+        return results
+    }
+
+    private func fetchSingleAppRawPairs(appId: Int, region: StorefrontRegion) async throws -> [(title: String, price: String)] {
         guard let url = URL(string: "https://apps.apple.com/\(region.id)/app/id\(appId)") else {
             throw URLError(.badURL)
         }
@@ -145,24 +179,19 @@ final class AppStoreIAPService: ObservableObject {
             return []
         }
 
-        let rawPairs = extractTextPairsFromAppStoreHTML(html)
-        var results: [IAPOfferItem] = []
+        return extractTextPairsFromAppStoreHTML(html)
+    }
 
-        for (index, pair) in rawPairs.enumerated() {
-            let numeric = CurrencyService.shared.parseNumericPrice(from: pair.price, region: region)
-            let vnd = CurrencyService.shared.convertToVND(numericPrice: numeric, region: region)
-            let item = IAPOfferItem(
-                title: pair.title,
-                rawPrice: pair.price,
-                numericPrice: numeric,
-                priceInVND: vnd,
-                region: region,
-                rankIndex: index + 1
-            )
-            results.append(item)
+    private func normalizeTitle(_ title: String, appId: Int) -> String {
+        var t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if appId == 6473753684 {
+            if t.contains("Claude Max") && !t.contains("x5") {
+                t = t.replacingOccurrences(of: "Claude Max", with: "Claude Max (Gói x5)")
+            } else if t.contains("Claude Ultra") && !t.contains("x20") {
+                t = t.replacingOccurrences(of: "Claude Ultra", with: "Claude Ultra (Gói x20)")
+            }
         }
-
-        return results
+        return t
     }
 
     // MARK: - 3. Quét song song tất cả 10 Quốc gia để so sánh giá & tìm gói ẩn rẻ nhất
