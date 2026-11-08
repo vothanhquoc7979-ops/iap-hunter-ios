@@ -6,7 +6,7 @@ struct StorefrontRegion: Identifiable, Hashable, Codable {
     let name: String        // Tên quốc gia tiếng Việt
     let flag: String        // Emoji cờ
     let currencyCode: String // Mã tiền tệ ISO, e.g. "VND", "TRY", "NGN"
-    let decimalSeparator: Character // Dấu phân cách thập phân chuẩn trên App Store của vùng đó
+    let decimalSeparator: String // Dấu phân cách thập phân chuẩn trên App Store của vùng đó
     let hasDecimals: Bool   // Tiền tệ có phần thập phân trên App Store hay không
 
     static let supportedRegions: [StorefrontRegion] = [
