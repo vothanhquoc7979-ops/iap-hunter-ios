@@ -47,6 +47,31 @@ const REGIONS = [
   }
 ];
 
+// Nhóm các App vệ tinh dùng chung gói Subscription ẩn (Companion Ecosystem Apps)
+const ECOSYSTEM_COMPANIONS = {
+  // Hệ sinh thái Google One / Google AI (Pro 5TB, Ultra x5 20TB, Ultra x20 30TB nằm ẩn trong Google App, Gemini, Docs, Calendar)
+  '1451784328': [
+    { id: '1451784328', name: 'Google One', isPrimary: true },
+    { id: '6477489729', name: 'Google Gemini (Chứa AI Pro & Ultra)', isPrimary: false },
+    { id: '284815942',  name: 'Google App (Chứa AI Ultra x5 20TB & x20 30TB)', isPrimary: false },
+    { id: '842842640',  name: 'Google Docs (Chứa AI Pro 5TB Năm)', isPrimary: false },
+    { id: '909319292',  name: 'Google Calendar (Chứa 30GB & AI Plus Năm)', isPrimary: false },
+    { id: '962194608',  name: 'Google Photos', isPrimary: false }
+  ],
+  '6477489729': [
+    { id: '6477489729', name: 'Google Gemini', isPrimary: true },
+    { id: '284815942',  name: 'Google App (Chứa AI Ultra x5 20TB & x20 30TB)', isPrimary: false },
+    { id: '1451784328', name: 'Google One', isPrimary: false },
+    { id: '842842640',  name: 'Google Docs (Chứa AI Pro 5TB Năm)', isPrimary: false },
+    { id: '909319292',  name: 'Google Calendar (Chứa 30GB & AI Plus Năm)', isPrimary: false }
+  ],
+  // Hệ sinh thái YouTube (YouTube Music chứa gói YouTube Premium Family ẩn 139k rẻ hơn bản chính 195k)
+  '544007664': [
+    { id: '544007664',  name: 'YouTube', isPrimary: true },
+    { id: '1017492454', name: 'YouTube Music (Chứa gói Family ẩn giá rẻ)', isPrimary: false }
+  ]
+};
+
 let ratesToVND = {
   VND: 1.0,
   USD: 25450.0,
@@ -117,7 +142,13 @@ function formatVND(vnd) {
 
 function normalizeOfferTitle(title, appId) {
   let t = String(title).trim();
-  // Làm rõ gói x5 và x20 của Claude / AI Ultra
+  // Gắn nhãn rõ ràng cho Google AI Ultra x5 (20 TB) và Google AI Ultra x20 (30 TB)
+  if (t.includes('Google AI Ultra (20 TB)') && !t.includes('x5')) {
+    t = 'Google AI Ultra x5 (20 TB)';
+  } else if (t.includes('Google AI Ultra (30 TB)') && !t.includes('x20')) {
+    t = 'Google AI Ultra x20 (30 TB)';
+  }
+  // Làm rõ gói x5 và x20 của Claude
   if (String(appId) === '6473753684') {
     if (t.includes('Claude Max') && !t.includes('x5')) {
       t = t.replace('Claude Max', 'Claude Max (Gói x5)');
@@ -156,7 +187,7 @@ function extractTextPairsFromHTML(html, appId) {
   }
 }
 
-async function fetchSingleAppPairs(appId, region) {
+async function fetchSingleAppPairs(appId, region, sourceLabel = null, isHiddenCompanion = false) {
   const url = `https://apps.apple.com/${region.id}/app/id${appId}`;
   const res = await fetch(url, {
     headers: {
@@ -167,6 +198,7 @@ async function fetchSingleAppPairs(appId, region) {
     signal: AbortSignal.timeout(12000)
   });
 
+  let html = '';
   if (res.status >= 300 && res.status < 400) {
     const loc = res.headers.get('location') || '';
     if (loc.startsWith('http')) {
@@ -177,32 +209,84 @@ async function fetchSingleAppPairs(appId, region) {
         },
         signal: AbortSignal.timeout(12000)
       });
-      const html2 = await res2.text();
-      return extractTextPairsFromHTML(html2, appId);
+      html = await res2.text();
+    } else {
+      return [];
     }
-    return [];
+  } else {
+    html = await res.text();
   }
 
-  const html = await res.text();
-  return extractTextPairsFromHTML(html, appId);
+  return extractTextPairsFromHTML(html, appId).map(p => ({
+    ...p,
+    sourceApp: sourceLabel,
+    isHiddenCompanion
+  }));
 }
 
-async function fetchIAPForRegion(appId, region) {
+async function fetchIAPForRegion(appId, region, includeGlobalUncovered = false) {
   await refreshRatesIfNeeded();
   const idStr = String(appId);
+  const companions = ECOSYSTEM_COMPANIONS[idStr];
 
-  // Khi quét Google One (1451784328) hoặc Google Gemini (6477489729),
-  // tự động gộp cả 2 app để lấy đủ cả 100GB, 200GB, AI Plus (400GB/2TB), AI Pro (5TB) và AI Ultra (30TB)!
-  if (idStr === '1451784328' || idStr === '6477489729') {
-    const [geminiPairs, onePairs] = await Promise.all([
-      fetchSingleAppPairs('6477489729', region).catch(() => []),
-      fetchSingleAppPairs('1451784328', region).catch(() => [])
-    ]);
-    return buildOfferItems([...geminiPairs, ...onePairs], region);
+  let allPairs = [];
+  if (companions) {
+    const lists = await Promise.all(
+      companions.map(c =>
+        fetchSingleAppPairs(c.id, region, c.name, !c.isPrimary).catch(() => [])
+      )
+    );
+    allPairs = lists.flat();
+  } else {
+    allPairs = await fetchSingleAppPairs(idStr, region, null, false);
   }
 
-  const pairs = await fetchSingleAppPairs(idStr, region);
-  return buildOfferItems(pairs, region);
+  let items = buildOfferItems(allPairs, region);
+
+  // Lớp 2: Nếu đang quét chi tiết 1 vùng (vd: VN), tự động quét chéo sang TR, EG, US để lôi các gói bị ẩn khỏi Top 10 của vùng hiện tại (như Google AI Ultra x5 20TB & AI Ultra x20 30TB)!
+  if (includeGlobalUncovered) {
+    const existingTitles = new Set(items.map(i => i.title.toLowerCase()));
+    const probeRegions = ['tr', 'us', 'eg', 'ph'].filter(rId => rId !== region.id);
+    const probeRegionObjs = probeRegions.map(rId => REGIONS.find(r => r.id === rId)).filter(Boolean);
+
+    const probeResults = await Promise.all(
+      probeRegionObjs.map(async (pReg) => {
+        try {
+          if (companions) {
+            const subLists = await Promise.all(
+              companions.slice(0, 3).map(c =>
+                fetchSingleAppPairs(c.id, pReg, `${c.name} • Vùng ${pReg.flag} ${pReg.name}`, true).catch(() => [])
+              )
+            );
+            return buildOfferItems(subLists.flat(), pReg);
+          } else {
+            const sub = await fetchSingleAppPairs(idStr, pReg, `Ẩn tại Store ${pReg.flag} ${pReg.name}`, true).catch(() => []);
+            return buildOfferItems(sub, pReg);
+          }
+        } catch (_) {
+          return [];
+        }
+      })
+    );
+
+    const uncoveredItems = [];
+    for (const pList of probeResults) {
+      for (const offer of pList) {
+        const key = offer.title.toLowerCase();
+        // Nếu gói này hoàn toàn bị ẩn trên Store đang chọn (như AI Ultra x5 / x20 bị ẩn trên Store VN)
+        if (!existingTitles.has(key)) {
+          uncoveredItems.push({
+            ...offer,
+            isUncoveredFromOtherRegion: true,
+            sourceApp: offer.sourceApp || `Ẩn trên Store ${region.name} (Phát hiện tại ${offer.region.flag} ${offer.region.name})`
+          });
+        }
+      }
+    }
+    items = [...items, ...uncoveredItems];
+  }
+
+  return items;
 }
 
 function buildOfferItems(pairs, region) {
@@ -211,23 +295,26 @@ function buildOfferItems(pairs, region) {
     const numericPrice = parseNumericPrice(p.price, region);
     const priceInVND = numericPrice !== null ? (region.currencyCode === 'VND' ? numericPrice : numericPrice * rate) : null;
     return {
-      id: `${region.id}_${idx}_${p.title}`,
+      id: `${region.id}_${idx}_${p.title}_${p.price}`,
       title: p.title,
       rawPrice: p.price,
       numericPrice,
       priceInVND,
       formattedVND: formatVND(priceInVND),
       region,
-      rankIndex: idx + 1
+      rankIndex: idx + 1,
+      sourceApp: p.sourceApp || null,
+      isHiddenCompanion: Boolean(p.isHiddenCompanion),
+      isUncoveredFromOtherRegion: Boolean(p.isUncoveredFromOtherRegion)
     };
   });
 }
 
-function deduplicateOffersForMultiRegion(offers) {
+function deduplicateOffers(offers) {
   const seen = new Set();
   const unique = [];
   for (const o of offers) {
-    const key = `${o.title.toLowerCase()}|${o.rawPrice}`;
+    const key = `${o.region.id}|${o.title.toLowerCase()}|${o.rawPrice}`;
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(o);
@@ -239,22 +326,31 @@ function deduplicateOffersForMultiRegion(offers) {
 
 function groupOffers(offers) {
   const map = new Map();
-  for (const offer of offers) {
+  for (const offer of deduplicateOffers(offers)) {
     const key = offer.title.trim().toLowerCase();
     if (!map.has(key)) {
-      map.set(key, { id: key, title: offer.title, offers: [] });
+      map.set(key, {
+        id: key,
+        title: offer.title,
+        offers: [],
+        isDeepHidden: false
+      });
     }
-    map.get(key).offers.push(offer);
+    const g = map.get(key);
+    g.offers.push(offer);
+    if (offer.isHiddenCompanion || offer.isUncoveredFromOtherRegion) {
+      g.isDeepHidden = true;
+    }
   }
 
   const groups = [];
   for (const g of map.values()) {
     g.offers.sort((a, b) => (a.priceInVND ?? Infinity) - (b.priceInVND ?? Infinity));
-    const distinctPrices = new Set(g.offers.map(o => o.rawPrice));
-    g.hasHiddenPriceTiers = distinctPrices.size > 1;
+    const distinctPrices = new Set(g.offers.map(o => `${o.rawPrice}`));
+    g.hasHiddenPriceTiers = distinctPrices.size > 1 || g.isDeepHidden;
     const minVND = g.offers[0]?.priceInVND;
     const maxVND = g.offers[g.offers.length - 1]?.priceInVND;
-    if (g.hasHiddenPriceTiers && minVND && maxVND && maxVND > minVND) {
+    if (distinctPrices.size > 1 && minVND && maxVND && maxVND > minVND) {
       g.maxSavingsPercentage = Math.round(((maxVND - minVND) / maxVND) * 100);
       g.maxSavingsVNDString = formatVND(maxVND - minVND);
     } else {
@@ -264,10 +360,13 @@ function groupOffers(offers) {
     groups.push(g);
   }
 
+  // Ưu tiên đẩy các gói AI Ultra / AI Pro / Gói Ẩn Sâu lên đầu
   groups.sort((a, b) => {
-    if (a.hasHiddenPriceTiers !== b.hasHiddenPriceTiers) {
-      return a.hasHiddenPriceTiers ? -1 : 1;
-    }
+    const aIsAI = a.title.includes('AI Ultra') || a.title.includes('AI Pro') || a.title.includes('x5') || a.title.includes('x20');
+    const bIsAI = b.title.includes('AI Ultra') || b.title.includes('AI Pro') || b.title.includes('x5') || b.title.includes('x20');
+    if (aIsAI !== bIsAI) return aIsAI ? -1 : 1;
+    if (a.isDeepHidden !== b.isDeepHidden) return a.isDeepHidden ? -1 : 1;
+    if (a.hasHiddenPriceTiers !== b.hasHiddenPriceTiers) return a.hasHiddenPriceTiers ? -1 : 1;
     return (a.offers[0]?.priceInVND ?? Infinity) - (b.offers[0]?.priceInVND ?? Infinity);
   });
 
@@ -317,7 +416,7 @@ async function handleApi(req, res, parsedUrl) {
     const appId = parsedUrl.searchParams.get('appId');
     const country = parsedUrl.searchParams.get('country') || 'vn';
     const region = REGIONS.find(r => r.id === country) || REGIONS[0];
-    const offers = await fetchIAPForRegion(appId, region);
+    const offers = await fetchIAPForRegion(appId, region, true);
     const groups = groupOffers(offers);
     res.end(JSON.stringify({ region, offers, groups }));
     return;
@@ -328,8 +427,8 @@ async function handleApi(req, res, parsedUrl) {
     const results = await Promise.all(
       REGIONS.map(async (region) => {
         try {
-          const rawOffers = await fetchIAPForRegion(appId, region);
-          const offers = deduplicateOffersForMultiRegion(rawOffers);
+          const rawOffers = await fetchIAPForRegion(appId, region, false);
+          const offers = deduplicateOffers(rawOffers);
           const cheapest = offers.reduce((min, o) => ((o.priceInVND ?? Infinity) < (min?.priceInVND ?? Infinity) ? o : min), null);
           return { region, offers, cheapest };
         } catch (err) {
@@ -386,7 +485,7 @@ function generateMobileConfig(appUrl) {
         </dict>
     </array>
     <key>PayloadDescription</key>
-    <string>Cài đặt trực tiếp ứng dụng kiểm tra IAP ẩn (Google One, AI Pro/Ultra, Claude x5/x20, ChatGPT...) lên màn hình chính iPhone.</string>
+    <string>Cài đặt trực tiếp ứng dụng kiểm tra IAP ẩn (Google One, AI Pro/Ultra x5/x20, Claude, ChatGPT...) lên màn hình chính iPhone.</string>
     <key>PayloadDisplayName</key>
     <string>IAP Hunter iOS (Kèm Icon Chuẩn)</string>
     <key>PayloadIdentifier</key>

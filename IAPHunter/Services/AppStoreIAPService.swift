@@ -130,13 +130,33 @@ final class AppStoreIAPService: ObservableObject {
 
         var rawPairs: [(title: String, price: String)] = []
 
-        // Gộp tự động Google One (1451784328) + Google Gemini (6477489729) để có đủ 100GB, 200GB, AI Plus, AI Pro (5TB) và AI Ultra (30TB)
-        if appId == 1451784328 || appId == 6477489729 {
-            async let geminiPairs = fetchSingleAppRawPairs(appId: 6477489729, region: region)
-            async let onePairs = fetchSingleAppRawPairs(appId: 1451784328, region: region)
-            let g = (try? await geminiPairs) ?? []
-            let o = (try? await onePairs) ?? []
-            rawPairs = g + o
+        // Gộp tự động hệ sinh thái Google (Google One + Gemini + Google App + Docs + Calendar) để lôi ra toàn bộ gói ẩn AI Pro (5TB), AI Ultra x5 (20TB), AI Ultra x20 (30TB), 30GB
+        if appId == 1451784328 || appId == 6477489729 || appId == 284815942 {
+            let companionIds = [6477489729, 284815942, 1451784328, 842842640, 909319292]
+            for cid in companionIds {
+                if let p = try? await fetchSingleAppRawPairs(appId: cid, region: region) {
+                    rawPairs.append(contentsOf: p)
+                }
+            }
+            // Nếu vùng hiện tại (như VN) ẩn gói AI Ultra x5 (20TB) và x20 (30TB) khỏi Top 10, tự động quét chéo sang TR để lôi ra
+            if region.id != "tr", let trRegion = StorefrontRegion.supportedRegions.first(where: { $0.id == "tr" }) {
+                if let trUltraPairs = try? await fetchSingleAppRawPairs(appId: 284815942, region: trRegion) {
+                    let existingNames = Set(rawPairs.map { normalizeTitle($0.title, appId: appId).lowercased() })
+                    for pair in trUltraPairs {
+                        let norm = normalizeTitle(pair.title, appId: appId)
+                        if !existingNames.contains(norm.lowercased()) {
+                            rawPairs.append((title: "\(norm) [Ẩn tại Store VN • Mở ở TR]", price: pair.price))
+                        }
+                    }
+                }
+            }
+        } else if appId == 544007664 {
+            // Gộp YouTube + YouTube Music (chứa gói Family ẩn 139k)
+            for cid in [544007664, 1017492454] {
+                if let p = try? await fetchSingleAppRawPairs(appId: cid, region: region) {
+                    rawPairs.append(contentsOf: p)
+                }
+            }
         } else {
             rawPairs = try await fetchSingleAppRawPairs(appId: appId, region: region)
         }
@@ -184,6 +204,11 @@ final class AppStoreIAPService: ObservableObject {
 
     private func normalizeTitle(_ title: String, appId: Int) -> String {
         var t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.contains("Google AI Ultra (20 TB)") && !t.contains("x5") {
+            t = "Google AI Ultra x5 (20 TB)"
+        } else if t.contains("Google AI Ultra (30 TB)") && !t.contains("x20") {
+            t = "Google AI Ultra x20 (30 TB)"
+        }
         if appId == 6473753684 {
             if t.contains("Claude Max") && !t.contains("x5") {
                 t = t.replacingOccurrences(of: "Claude Max", with: "Claude Max (Gói x5)")

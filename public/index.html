@@ -1029,24 +1029,29 @@
       list.innerHTML = groups.map(g => {
         const minVnd = g.offers[0]?.priceInVND;
         return `
-          <div class="offer-group-box">
-            <div style="font-size:16px; font-weight:700;">${g.title}</div>
+          <div class="offer-group-box" style="${g.isDeepHidden ? 'border: 1px solid rgba(94, 92, 230, 0.55);' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <div style="font-size:16px; font-weight:700;">${g.title}</div>
+              ${g.isDeepHidden ? `<span class="tag-pill" style="background:rgba(94,92,230,0.22); color:#a5b4fc; margin-top:0;">🕵️ GÓI ẨN SÂU</span>` : ''}
+            </div>
             ${g.hasHiddenPriceTiers ? `
               <div style="margin-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
-                <span class="tag-pill">Phát hiện ${g.offers.length} biến thể giá ẩn</span>
+                <span class="tag-pill">Phát hiện ${g.offers.length} mức giá</span>
                 ${g.maxSavingsPercentage ? `<span class="tag-pill orange">Tiết kiệm ${g.maxSavingsPercentage}% (-${g.maxSavingsVNDString})</span>` : ''}
               </div>
             ` : ''}
             ${g.offers.map(o => {
-              const isCheapest = g.hasHiddenPriceTiers && o.priceInVND === minVnd;
+              const isCheapest = (g.offers.length > 1) && o.priceInVND === minVnd;
               return `
                 <div class="offer-row ${isCheapest ? 'best-deal' : ''}">
-                  <div>
+                  <div style="flex:1; min-width:0; padding-right:8px;">
                     <div style="font-size:11px; color:var(--ios-secondary);">
-                      Mức #${o.rankIndex} ${isCheapest ? '• <b style="color:var(--ios-green)">GIÁ ẨN RẺ NHẤT</b>' : ''}
+                      ${o.region.flag} ${o.region.name} ${isCheapest ? '• <b style="color:var(--ios-green)">GIÁ RẺ NHẤT</b>' : ''}
                     </div>
-                    <div style="font-size:17px; font-weight:700; color:${isCheapest ? 'var(--ios-green)' : '#fff'};">${o.rawPrice}</div>
-                    ${o.region.currencyCode !== 'VND' ? `<div style="font-size:12px; color:var(--ios-secondary);">≈ ${o.formattedVND}</div>` : ''}
+                    <div style="font-size:17px; font-weight:700; color:${isCheapest ? 'var(--ios-green)' : '#fff'};">
+                      ${o.rawPrice} <span style="font-size:13px; font-weight:500; color:var(--ios-secondary);">(${o.formattedVND})</span>
+                    </div>
+                    ${o.sourceApp ? `<div style="font-size:11px; color:#818cf8; margin-top:2px;">🔍 Nguồn ẩn: ${o.sourceApp}</div>` : ''}
                   </div>
                   <button class="ios-pill-action" style="${isCheapest ? 'background:var(--ios-green); color:#042810;' : ''}" onclick='openPaymentSheet(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
                     + Mua Gói Này
