@@ -5,7 +5,12 @@ struct ContentView: View {
         TabView {
             SearchView()
                 .tabItem {
-                    Label("Quét IAP Ẩn", systemImage: "sparkle.magnifyingglass")
+                    Label("Quét Gói Ẩn", systemImage: "sparkle.magnifyingglass")
+                }
+
+            RegionSwitcherView()
+                .tabItem {
+                    Label("Đổi Vùng ID", systemImage: "globe.asia.australia.fill")
                 }
 
             SavedAppsView()

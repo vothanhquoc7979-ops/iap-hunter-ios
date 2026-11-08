@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IAP Hunter" />
+  <link rel="apple-touch-icon" href="/icon.png" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <title>IAP Hunter</title>
+  <style>
+    :root {
+      --ios-bg: #000000;
+      --ios-group: #1c1c1e;
+      --ios-group-elevated: #2c2c2e;
+      --ios-label: #ffffff;
+      --ios-secondary: #8e8e93;
+      --ios-tertiary: #48484a;
+      --ios-blue: #0a84ff;
+      --ios-green: #30d158;
+      --ios-orange: #ff9f0a;
+      --ios-indigo: #5e5ce6;
+      --ios-separator: rgba(84, 84, 88, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--ios-bg);
+      color: var(--ios-label);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: calc(90px + env(safe-area-inset-bottom, 20px));
+    }
+
+    /* Dynamic Island Toast Notification */
+    .dynamic-island {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 12px) + 8px);
+      left: 50%;
+      transform: translateX(-50%) scale(0.85);
+      background: rgba(28, 28, 30, 0.96);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 0.5px solid rgba(255,255,255,0.18);
+      color: #fff;
+      padding: 11px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.65);
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+      max-width: 92vw;
+      white-space: nowrap;
+    }
+    .dynamic-island.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Translucent iOS Navigation Header */
+    .ios-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: calc(env(safe-area-inset-top, 14px) + 6px) 16px 11px;
+      background: rgba(0, 0, 0, 0.76);
+      backdrop-filter: saturate(180%) blur(24px);
+      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      border-bottom: 0.5px solid var(--ios-separator);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-row img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(10, 132, 255, 0.35);
+    }
+    .brand-title {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .nav-back-btn {
+      background: none;
+      border: none;
+      color: var(--ios-blue);
+      font-size: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+      cursor: pointer;
+    }
+
+    .active-region-badge {
+      background: var(--ios-group);
+      border: 0.5px solid var(--ios-separator);
+      color: var(--ios-label);
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 14px 16px;
+    }
+
+    /* Native iOS Search Field */
+    .ios-search-wrapper {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .ios-search-bar {
+      flex: 1;
+      background: #1c1c1e;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      height: 38px;
+    }
+    .ios-search-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      padding-left: 8px;
+      outline: none;
+    }
+    .ios-search-bar input::placeholder {
+      color: var(--ios-secondary);
+    }
+    .ios-search-btn {
+      background: var(--ios-blue);
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: 0 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Profile Install Card */
+    .ios-promo-card {
+      background: linear-gradient(135deg, #1c1c1e 0%, #242429 100%);
+      border: 0.5px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 13px 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .ios-promo-card img {
+      width: 46px;
+      height: 46px;
+      border-radius: 11px;
+      flex-shrink: 0;
+    }
+    .ios-promo-card .text {
+      flex: 1;
+      min-width: 0;
+    }
+    .ios-promo-card .text h4 {
+      margin: 0 0 2px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .ios-promo-card .text p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--ios-secondary);
+      line-height: 1.3;
+    }
+    .ios-pill-action {
+      background: rgba(10, 132, 255, 0.18);
+      color: var(--ios-blue);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 99px;
+      text-decoration: none;
+      white-space: nowrap;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* iOS Inset Grouped List */
+    .ios-section-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ios-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin: 18px 14px 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ios-inset-group {
+      background: var(--ios-group);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .ios-cell {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 11px 15px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .ios-cell:active {
+      background: var(--ios-group-elevated);
+    }
+    .ios-cell:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 76px;
+      right: 0;
+      height: 0.5px;
+      background: var(--ios-separator);
+    }
+
+    .app-icon-squircle {
+      width: 50px;
+      height: 50px;
+      border-radius: 11.5px;
+      object-fit: cover;
+      border: 0.5px solid rgba(255,255,255,0.1);
+      background: #2c2c2e;
+      flex-shrink: 0;
+    }
+
+    .cell-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .cell-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ios-label);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .cell-sub {
+      font-size: 13px;
+      color: var(--ios-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tag-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(48, 209, 88, 0.16);
+      color: var(--ios-green);
+      margin-top: 4px;
+    }
+    .tag-pill.orange {
+      background: rgba(255, 159, 10, 0.16);
+      color: var(--ios-orange);
+    }
+
+    /* Segmented Control iOS 18 */
+    .ios-segmented {
+      display: flex;
+      background: #1c1c1e;
+      padding: 3px;
+      border-radius: 10px;
+      margin: 12px 0 14px;
+    }
+    .seg-item {
+      flex: 1;
+      text-align: center;
+      padding: 7px 6px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      color: var(--ios-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .seg-item.active {
+      background: #3a3a3c;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Region Horizontal Scroll */
+    .region-scroller {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+    .region-scroller::-webkit-scrollbar { display: none; }
+    .region-chip {
+      padding: 7px 13px;
+      border-radius: 99px;
+      background: var(--ios-group);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      border: 0.5px solid var(--ios-separator);
+    }
+    .region-chip.active {
+      background: var(--ios-blue);
+      color: #fff;
+      font-weight: 600;
+      border-color: transparent;
+    }
+
+    /* iOS Toggle Switch */
+    .ios-switch {
+      appearance: none;
+      width: 51px;
+      height: 31px;
+      background: #39393d;
+      border-radius: 31px;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.25s;
+      flex-shrink: 0;
+    }
+    .ios-switch:checked {
+      background: var(--ios-green);
+    }
+    .ios-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 27px;
+      height: 27px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .ios-switch:checked::after {
+      transform: translateX(20px);
+    }
+
+    /* Offer Cards */
+    .offer-group-box {
+      background: var(--ios-group);
+      border-radius: 15px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .offer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      border-radius: 11px;
+      background: #252528;
+      margin-top: 8px;
+    }
+    .offer-row.best-deal {
+      background: rgba(48, 209, 88, 0.12);
+      border: 1px solid rgba(48, 209, 88, 0.35);
+    }
+
+    /* Bottom Tab Bar iOS */
+    .ios-tabbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(56px + env(safe-area-inset-bottom, 16px));
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+      background: rgba(22, 22, 24, 0.85);
+      backdrop-filter: saturate(180%) blur(25px);
+      -webkit-backdrop-filter: saturate(180%) blur(25px);
+      border-top: 0.5px solid var(--ios-separator);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 500;
+    }
+    .tabbar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: var(--ios-secondary);
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      padding-top: 6px;
+    }
+    .tabbar-item.active {
+      color: var(--ios-blue);
+    }
+    .tabbar-item svg {
+      width: 23px;
+      height: 23px;
+      fill: currentColor;
+    }
+
+    /* Action Sheet Modal */
+    .ios-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1500;
+    }
+    .ios-backdrop.open { display: flex; }
+    .ios-sheet {
+      background: #1c1c1e;
+      width: 100%;
+      max-width: 540px;
+      border-radius: 22px 22px 0 0;
+      padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 16px));
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+    .sheet-handle {
+      width: 38px;
+      height: 5px;
+      background: #48484a;
+      border-radius: 99px;
+      margin: 0 auto 14px;
+    }
+    .ios-btn-large {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 13px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      background: var(--ios-blue);
+    }
+    .ios-btn-large.green { background: var(--ios-green); color: #042810; }
+    .ios-btn-large.gray { background: #2c2c2e; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Island Toast -->
+  <div id="dynamicIsland" class="dynamic-island">
+    <span id="islandIcon">✅</span>
+    <span id="islandText">Đã chuyển vùng</span>
+  </div>
+
+  <!-- Top iOS Navigation Bar -->
+  <div class="ios-navbar">
+    <div class="brand-row" id="navBrand">
+      <img src="/icon.png" alt="Icon" />
+      <span class="brand-title" id="navTitle">IAP Hunter</span>
+    </div>
+    <button class="nav-back-btn" id="navBackBtn" style="display:none;" onclick="closeAppDetail()">
+      ‹ Khám phá
+    </button>
+    <div class="active-region-badge" onclick="switchBottomTab('region')">
+      <span id="currentRegionBadge">🇻🇳 VN</span>
+      <span style="font-size:10px; color:var(--ios-secondary);">▼</span>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- TAB 1: EXPLORE & SCAN -->
+    <div id="tabExplore">
+      <!-- Home Subview -->
+      <div id="homeSubview">
+        <div class="ios-search-wrapper">
+          <div class="ios-search-bar">
+            <span style="color:var(--ios-secondary);">🔍</span>
+            <input id="searchInput" type="text" placeholder="Tìm Google One, Duolingo, Link App..." onkeydown="if(event.key==='Enter') doSearch()" />
+          </div>
+          <button class="ios-search-btn" onclick="doSearch()">Tìm</button>
+        </div>
+
+        <!-- 1-Tap Profile Install Card -->
+        <div class="ios-promo-card">
+          <img src="/icon.png" alt="IAP Hunter" />
+          <div class="text">
+            <h4>Cài App & Icon Chuẩn iOS</h4>
+            <p>Thêm biểu tượng IAP Hunter ra màn hình chính iPhone chỉ với 1 chạm.</p>
+          </div>
+          <a href="/install.mobileconfig" class="ios-pill-action">CÀI ĐẶT</a>
+        </div>
+
+        <div id="searchResultsArea"></div>
+
+        <!-- Featured Apps with Real Icons -->
+        <div class="ios-section-header">
+          <span>Gói IAP Ẩn Nổi Bật (Gồm Google One)</span>
+          <span>Chạm để quét</span>
+        </div>
+        <div class="ios-inset-group" id="presetAppsGroup"></div>
+      </div>
+
+      <!-- App Detail Subview -->
+      <div id="detailSubview" style="display:none;">
+        <div id="detailAppHeader"></div>
+
+        <div class="ios-segmented">
+          <div class="seg-item active" id="segSingle" onclick="switchDetailMode('single')">Gói Ẩn Theo Vùng</div>
+          <div class="seg-item" id="segMulti" onclick="switchDetailMode('multi')">So Sánh 10 Nước (VNĐ)</div>
+        </div>
+
+        <!-- Single Region View -->
+        <div id="singleModeBox">
+          <div class="region-scroller" id="detailRegionChips"></div>
+
+          <div class="ios-inset-group" style="margin-bottom:12px;">
+            <div class="ios-cell" style="cursor:default;">
+              <div class="cell-main">
+                <div class="cell-title" style="font-size:15px;">Chỉ lọc các gói có Offer Ẩn giá rẻ</div>
+                <div class="cell-sub">Ẩn các gói một giá, chỉ hiện gói có A/B test rẻ hơn</div>
+              </div>
+              <input type="checkbox" class="ios-switch" id="onlyHiddenSwitch" onchange="renderSingleOffers()" />
+            </div>
+          </div>
+
+          <div id="singleOffersList"></div>
+        </div>
+
+        <!-- Multi Region View -->
+        <div id="multiModeBox" style="display:none;">
+          <div id="multiOffersList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ONE-TAP APPLE ID / CLOUD REGION SWITCHER -->
+    <div id="tabRegionSwitcher" style="display:none;">
+      <div class="ios-section-header">
+        <span>Chuyển Vùng App Store / iCloud Nhanh</span>
+      </div>
+      <div class="ios-inset-group" style="padding:14px 15px; margin-bottom:14px;">
+        <div style="font-size:14px; line-height:1.45; color:var(--ios-secondary);">
+          Khi bạn bấm <strong style="color:#fff;">"Đổi Vùng"</strong> ở bất kỳ quốc gia nào dưới đây, ứng dụng sẽ <strong style="color:var(--ios-green);">tự động chạy ngầm 3 tác vụ cùng lúc</strong>:<br/>
+          1. Chuyển vùng quét giá mặc định của App sang quốc gia đó.<br/>
+          2. Tự động tạo & sao chép sẵn <b>Địa chỉ + Mã Bưu Chính (Zip Code) miễn thuế</b> chuẩn của nước đó vào bộ nhớ tạm iPhone.<br/>
+          3. Mở thẳng màn hình <b>Đổi Quốc Gia/Vùng của Apple ID</b> để bạn chỉ cần Dán (Paste) trong 3 giây!
+        </div>
+      </div>
+
+      <div class="ios-inset-group" id="regionSwitcherList"></div>
+    </div>
+
+    <!-- TAB 3: EXCHANGE RATES & SHORTCUTS -->
+    <div id="tabTools" style="display:none;">
+      <div class="ios-section-header">Lối Tắt Hệ Thống iOS</div>
+      <div class="ios-inset-group">
+        <a href="itms-apps://apps.apple.com/account/subscriptions" class="ios-cell" style="text-decoration:none;">
+          <div class="cell-main">
+            <div class="cell-title" style="color:var(--ios-blue);">Mở Xem Tất Cả Các Gói (See All Plans)</div>
+            <div class="cell-sub">Hiển thị toàn bộ gói IAP ẩn trong Subscription Group của Apple</div>
+          </div>
+          <span style="color:var(--ios-secondary);">↗</span>
+        </a>
+        <a href="itms-apps://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/accountSummary" class="ios-cell" style="text-decoration:none;">
+          <div class="cell-main">
+            <div class="cell-title" style="color:var(--ios-blue);">Mở Cài Đặt Quốc Gia / Vùng Apple ID</div>
+            <div class="cell-sub">Đi thẳng tới trang thay đổi Quốc gia App Store & iCloud</div>
+          </div>
+          <span style="color:var(--ios-secondary);">↗</span>
+        </a>
+      </div>
+
+      <div class="ios-section-header">Bảng Tỷ Giá Quy Đổi VNĐ Hôm Nay</div>
+      <div class="ios-inset-group" id="ratesListGroup"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Action Sheet -->
+  <div class="ios-backdrop" id="actionSheet" onclick="if(event.target===this) closeSheet()">
+    <div class="ios-sheet" id="sheetBody"></div>
+  </div>
+
+  <!-- Native iOS Bottom Tab Bar -->
+  <div class="ios-tabbar">
+    <div class="tabbar-item active" id="navTabExplore" onclick="switchBottomTab('explore')">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <span>Quét Gói Ẩn</span>
+    </div>
+    <div class="tabbar-item" id="navTabRegion" onclick="switchBottomTab('region')">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+      <span>Đổi Vùng ID</span>
+    </div>
+    <div class="tabbar-item" id="navTabTools" onclick="switchBottomTab('tools')">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      <span>Tỷ Giá & Lối Tắt</span>
+    </div>
+  </div>
+
+  <script>
+    const PRESET_APPS = [
+      {
+        id: 1451784328,
+        name: 'Google One',
+        seller: 'Google LLC',
+        desc: '100GB, 200GB, 2TB & Google AI Plus đa quốc gia',
+        tag: 'Mới cập nhật • Rẻ hơn 65%',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/dc/2e/e5/dc2ee5ef-a9fe-5e46-c268-08152216c862/logo_one_color-0-0-1x_U007emarketing-0-0-0-7-0-0-0-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 570060128,
+        name: 'Duolingo',
+        seller: 'Duolingo, Inc',
+        desc: 'Gói Super Duolingo ẩn 599.000đ (Giá gốc 860.000đ)',
+        tag: 'Tiết kiệm 261.000đ',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/8c/31/28/8c312832-119b-31b5-86a0-07450171d52d/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 547702041,
+        name: 'Tinder',
+        seller: 'Tinder LLC',
+        desc: 'Tinder Gold ẩn 56.000đ (VN) & 20.500đ (Thổ Nhĩ Kỳ)',
+        tag: 'Rẻ hơn 70%',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7a/39/53/7a39535c-d91c-82a7-019b-f2b741393987/AppIcon-0-0-1x_U007emarketing-0-7-0-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 1500855883,
+        name: 'CapCut - Chỉnh sửa video',
+        seller: 'Bytedance Pte. Ltd',
+        desc: 'Gói Standard/Monthly ẩn 117.000đ vs 222.000đ',
+        tag: 'Nhiều mức giá ẩn',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0f/10/c5/0f10c5b6-0564-9a43-501c-6a2186192350/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 544007664,
+        name: 'YouTube',
+        seller: 'Google LLC',
+        desc: 'So sánh gói YouTube Premium & Music 10 quốc gia',
+        tag: 'Đa quốc gia',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/54/2c/c2/542cc28f-06a7-52b9-3644-b61493f83226/logo_youtube_2024_q4_color-0-1x_U007emarketing-0-0-0-7-0-0-0-85-220-0.png/256x256bb.jpg'
+      },
+      {
+        id: 6448311069,
+        name: 'ChatGPT',
+        seller: 'OpenAI',
+        desc: 'Kiểm tra giá gói ChatGPT Plus các vùng Store',
+        tag: 'AI Plus',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0b/2c/4c/0b2c4cd6-9371-3d26-59a8-2a7a1d512008/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 897446215,
+        name: 'Canva: Thiết kế, Ảnh & Video',
+        seller: 'Canva',
+        desc: 'Các gói Canva Pro tháng & năm ẩn theo vùng',
+        tag: 'Thiết kế',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/85/79/4b/85794b8d-0861-5832-3137-04a9b617a306/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg'
+      },
+      {
+        id: 1600525061,
+        name: 'Locket Widget',
+        seller: 'Locket Labs, Inc.',
+        desc: 'Gói Locket Gold ẩn nhiều mức giá ưu đãi',
+        tag: 'Hot Trend',
+        icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7d/49/46/7d494647-e052-885c-6947-761771306332/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg'
+      }
+    ];
+
+    let regions = [];
+    let ratesToVND = {};
+    let currentRegionId = localStorage.getItem('iap_region') || 'vn';
+    let currentApp = null;
+    let currentSingleData = null;
+    let currentMultiData = null;
+    let islandTimer = null;
+
+    function showDynamicIsland(icon, message) {
+      const el = document.getElementById('dynamicIsland');
+      document.getElementById('islandIcon').textContent = icon;
+      document.getElementById('islandText').textContent = message;
+      el.classList.add('show');
+      if (islandTimer) clearTimeout(islandTimer);
+      islandTimer = setTimeout(() => el.classList.remove('show'), 3400);
+    }
+
+    async function init() {
+      renderPresetApps();
+      const res = await fetch('/api/regions');
+      const data = await res.json();
+      regions = data.regions || [];
+      ratesToVND = data.ratesToVND || {};
+      updateTopRegionBadge();
+      renderRegionSwitcherTab();
+      renderRatesTab();
+      renderDetailRegionChips();
+    }
+
+    function updateTopRegionBadge() {
+      const r = regions.find(x => x.id === currentRegionId) || { flag: '🇻🇳', id: 'vn' };
+      document.getElementById('currentRegionBadge').textContent = `${r.flag} ${r.id.toUpperCase()}`;
+    }
+
+    function renderPresetApps() {
+      const group = document.getElementById('presetAppsGroup');
+      group.innerHTML = PRESET_APPS.map(p => `
+        <div class="ios-cell" onclick="openAppById(${p.id}, '${p.icon}')">
+          <img class="app-icon-squircle" src="${p.icon}" onerror="this.src='/icon.png'" />
+          <div class="cell-main">
+            <div class="cell-title">${p.name}</div>
+            <div class="cell-sub">${p.desc}</div>
+            <span class="tag-pill">${p.tag}</span>
+          </div>
+          <span class="ios-pill-action">QUÉT</span>
+        </div>
+      `).join('');
+    }
+
+    function renderRegionSwitcherTab() {
+      const box = document.getElementById('regionSwitcherList');
+      box.innerHTML = regions.map(r => {
+        const isCurrent = r.id === currentRegionId;
+        const b = r.billing || {};
+        return `
+          <div class="ios-cell" onclick="activateCountryBackground('${r.id}', false)">
+            <div style="font-size:28px; width:40px; text-align:center;">${r.flag}</div>
+            <div class="cell-main">
+              <div class="cell-title">${r.name} (${r.currencyCode}) ${isCurrent ? '✓' : ''}</div>
+              <div class="cell-sub">${b.street || ''}, ${b.city || ''} • Zip: <b>${b.zip || ''}</b></div>
+            </div>
+            <button class="ios-pill-action" style="${isCurrent ? 'background:var(--ios-green); color:#042810;' : ''}" onclick="event.stopPropagation(); activateCountryBackground('${r.id}', true)">
+              ${isCurrent ? 'ĐANG DÙNG' : 'ĐỔI VÙNG'}
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function activateCountryBackground(regionId, openAppleIdSettings) {
+      currentRegionId = regionId;
+      localStorage.setItem('iap_region', regionId);
+      updateTopRegionBadge();
+      renderRegionSwitcherTab();
+      renderDetailRegionChips();
+
+      const r = regions.find(x => x.id === regionId);
+      if (!r) return;
+      const b = r.billing || {};
+      const clipText = `Đường: ${b.street} | Thành phố: ${b.city} | Bang/Tỉnh: ${b.state} | Mã Zip: ${b.zip} | SĐT: ${b.phone}`;
+
+      try {
+        await navigator.clipboard.writeText(b.zip || clipText);
+      } catch (_) {}
+
+      if (currentApp) {
+        currentSingleData = null;
+        loadSingleRegion();
+      }
+
+      if (openAppleIdSettings) {
+        showDynamicIsland(r.flag, `Đã chuyển sang ${r.name} & Copy Zip ${b.zip}!`);
+        openRegionSwitchSheet(r);
+      } else {
+        showDynamicIsland(r.flag, `Đã chuyển vùng quét sang ${r.name} (${r.currencyCode})`);
+      }
+    }
+
+    function openRegionSwitchSheet(region) {
+      const b = region.billing || {};
+      const sheet = document.getElementById('sheetBody');
+      sheet.innerHTML = `
+        <div class="sheet-handle"></div>
+        <div style="text-align:center; margin-bottom:14px;">
+          <div style="font-size:38px;">${region.flag}</div>
+          <div style="font-size:19px; font-weight:700; margin-top:4px;">Chuyển Apple ID sang ${region.name}</div>
+          <div style="font-size:13px; color:var(--ios-secondary); margin-top:3px;">Đã tự động lưu vùng & sao chép sẵn Mã Bưu Chính (Zip Code)</div>
+        </div>
+
+        <div class="ios-inset-group" style="background:#252528; margin-bottom:14px;">
+          <div class="ios-cell" onclick="copyField('${b.street}', 'Địa chỉ đường')">
+            <div class="cell-main"><div class="cell-sub">Đường (Street)</div><div class="cell-title" style="font-size:14px;">${b.street}</div></div>
+            <span class="ios-pill-action">Copy</span>
+          </div>
+          <div class="ios-cell" onclick="copyField('${b.city}', 'Thành phố')">
+            <div class="cell-main"><div class="cell-sub">Thành phố / Tỉnh</div><div class="cell-title" style="font-size:14px;">${b.city} (${b.state})</div></div>
+            <span class="ios-pill-action">Copy</span>
+          </div>
+          <div class="ios-cell" onclick="copyField('${b.zip}', 'Mã Zip / Postcode')">
+            <div class="cell-main"><div class="cell-sub">Mã Bưu Chính (Postcode / Zip)</div><div class="cell-title" style="font-size:15px; color:var(--ios-green);">${b.zip}</div></div>
+            <span class="ios-pill-action">Copy</span>
+          </div>
+          <div class="ios-cell" onclick="copyField('${b.phone}', 'Số điện thoại')">
+            <div class="cell-main"><div class="cell-sub">Điện thoại (Phone)</div><div class="cell-title" style="font-size:14px;">${b.phone}</div></div>
+            <span class="ios-pill-action">Copy</span>
+          </div>
+        </div>
+
+        <a href="itms-apps://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/accountSummary" class="ios-btn-large">
+          <span>⚡ Mở Thẳng Cài Đặt Quốc Gia Apple ID</span>
+          <span>↗</span>
+        </a>
+        <button class="ios-btn-large gray" onclick="closeSheet()">Đóng</button>
+      `;
+      document.getElementById('actionSheet').classList.add('open');
+    }
+
+    async function copyField(val, label) {
+      try {
+        await navigator.clipboard.writeText(val);
+      } catch (_) {}
+      showDynamicIsland('📋', `Đã copy ${label}: ${val}`);
+    }
+
+    function renderRatesTab() {
+      const box = document.getElementById('ratesListGroup');
+      box.innerHTML = regions.filter(r => r.currencyCode !== 'VND').map(r => {
+        const rate = ratesToVND[r.currencyCode] || 0;
+        const formatted = rate < 50 ? rate.toFixed(2) : Math.round(rate).toLocaleString('vi-VN');
+        return `
+          <div class="ios-cell" style="cursor:default;">
+            <div style="font-size:24px;">${r.flag}</div>
+            <div class="cell-main">
+              <div class="cell-title" style="font-size:15px;">1 ${r.currencyCode} (${r.name})</div>
+            </div>
+            <div style="font-weight:700; color:var(--ios-blue);">${formatted}đ</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function switchBottomTab(tab) {
+      document.getElementById('tabExplore').style.display = tab === 'explore' ? 'block' : 'none';
+      document.getElementById('tabRegionSwitcher').style.display = tab === 'region' ? 'block' : 'none';
+      document.getElementById('tabTools').style.display = tab === 'tools' ? 'block' : 'none';
+
+      document.getElementById('navTabExplore').className = 'tabbar-item ' + (tab === 'explore' ? 'active' : '');
+      document.getElementById('navTabRegion').className = 'tabbar-item ' + (tab === 'region' ? 'active' : '');
+      document.getElementById('navTabTools').className = 'tabbar-item ' + (tab === 'tools' ? 'active' : '');
+    }
+
+    async function doSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return;
+      const area = document.getElementById('searchResultsArea');
+      area.innerHTML = '<div style="text-align:center; padding:20px; color:var(--ios-secondary);">Đang tìm trên App Store...</div>';
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&country=${currentRegionId}`);
+      const data = await res.json();
+      const list = data.results || [];
+      if (!list.length) {
+        area.innerHTML = '<div style="text-align:center; padding:20px; color:var(--ios-secondary);">Không tìm thấy ứng dụng phù hợp.</div>';
+        return;
+      }
+      area.innerHTML = `
+        <div class="ios-section-header"><span>Kết Quả Tìm Kiếm (${list.length})</span></div>
+        <div class="ios-inset-group">
+          ${list.map(app => {
+            const hiIcon = (app.artworkUrl100 || '').replace('100x100bb', '256x256bb');
+            return `
+              <div class="ios-cell" onclick='openAppDetail(${JSON.stringify(app).replace(/'/g, "&#39;")})'>
+                <img class="app-icon-squircle" src="${hiIcon}" />
+                <div class="cell-main">
+                  <div class="cell-title">${app.trackName}</div>
+                  <div class="cell-sub">${app.sellerName || ''}</div>
+                </div>
+                <span class="ios-pill-action">QUÉT</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    async function openAppById(appId, fallbackIcon) {
+      showDynamicIsland('⏳', 'Đang kết nối App Store...');
+      const res = await fetch(`/api/search?q=${appId}&country=${currentRegionId}`);
+      const data = await res.json();
+      if (data.results && data.results[0]) {
+        openAppDetail(data.results[0]);
+      } else {
+        openAppDetail({ trackId: appId, trackName: 'Ứng dụng #' + appId, sellerName: 'App Store', artworkUrl100: fallbackIcon || '/icon.png' });
+      }
+    }
+
+    function openAppDetail(app) {
+      currentApp = app;
+      currentSingleData = null;
+      currentMultiData = null;
+      document.getElementById('homeSubview').style.display = 'none';
+      document.getElementById('detailSubview').style.display = 'block';
+      document.getElementById('navBrand').style.display = 'none';
+      document.getElementById('navBackBtn').style.display = 'flex';
+
+      const hiIcon = (app.artworkUrl100 || '/icon.png').replace('100x100bb', '256x256bb');
+      document.getElementById('detailAppHeader').innerHTML = `
+        <div class="ios-inset-group" style="margin-bottom:10px;">
+          <div class="ios-cell" style="cursor:default;">
+            <img class="app-icon-squircle" style="width:62px; height:62px; border-radius:14px;" src="${hiIcon}" />
+            <div class="cell-main">
+              <div class="cell-title" style="font-size:18px;">${app.trackName}</div>
+              <div class="cell-sub">${app.sellerName || ''}</div>
+              <div class="cell-sub" style="font-family:monospace; font-size:11px; color:var(--ios-blue);">ID: ${app.trackId}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      renderDetailRegionChips();
+      switchDetailMode('single');
+    }
+
+    function closeAppDetail() {
+      document.getElementById('detailSubview').style.display = 'none';
+      document.getElementById('homeSubview').style.display = 'block';
+      document.getElementById('navBrand').style.display = 'flex';
+      document.getElementById('navBackBtn').style.display = 'none';
+    }
+
+    function renderDetailRegionChips() {
+      const box = document.getElementById('detailRegionChips');
+      if (!box) return;
+      box.innerHTML = regions.map(r => `
+        <div class="region-chip ${r.id === currentRegionId ? 'active' : ''}" onclick="activateCountryBackground('${r.id}', false)">
+          ${r.flag} ${r.name}
+        </div>
+      `).join('');
+    }
+
+    function switchDetailMode(mode) {
+      document.getElementById('segSingle').className = 'seg-item ' + (mode === 'single' ? 'active' : '');
+      document.getElementById('segMulti').className = 'seg-item ' + (mode === 'multi' ? 'active' : '');
+      document.getElementById('singleModeBox').style.display = mode === 'single' ? 'block' : 'none';
+      document.getElementById('multiModeBox').style.display = mode === 'multi' ? 'block' : 'none';
+
+      if (mode === 'single') {
+        if (!currentSingleData) loadSingleRegion();
+      } else {
+        if (!currentMultiData) loadMultiRegion();
+      }
+    }
+
+    async function loadSingleRegion() {
+      const list = document.getElementById('singleOffersList');
+      list.innerHTML = '<div style="text-align:center; padding:32px; color:var(--ios-secondary);">Đang bóc tách các gói IAP ẩn từ Apple Store...</div>';
+      const res = await fetch(`/api/iap?appId=${currentApp.trackId}&country=${currentRegionId}`);
+      currentSingleData = await res.json();
+      renderSingleOffers();
+    }
+
+    function renderSingleOffers() {
+      const list = document.getElementById('singleOffersList');
+      if (!currentSingleData || !currentSingleData.groups?.length) {
+        list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--ios-secondary);">Không có dữ liệu IAP tại quốc gia này.</div>';
+        return;
+      }
+
+      const onlyHidden = document.getElementById('onlyHiddenSwitch').checked;
+      let groups = currentSingleData.groups;
+      if (onlyHidden) {
+        groups = groups.filter(g => g.hasHiddenPriceTiers);
+      }
+
+      if (!groups.length) {
+        list.innerHTML = '<div style="text-align:center; padding:28px; color:var(--ios-secondary);">Các gói ở vùng này đang đồng giá. Hãy bấm sang tab <b>"So Sánh 10 Nước (VNĐ)"</b> để tìm vùng rẻ hơn!</div>';
+        return;
+      }
+
+      list.innerHTML = groups.map(g => {
+        const minVnd = g.offers[0]?.priceInVND;
+        return `
+          <div class="offer-group-box">
+            <div style="font-size:16px; font-weight:700;">${g.title}</div>
+            ${g.hasHiddenPriceTiers ? `
+              <div style="margin-top:4px; display:flex; gap:6px; flex-wrap:wrap;">
+                <span class="tag-pill">Phát hiện ${g.offers.length} biến thể giá ẩn</span>
+                ${g.maxSavingsPercentage ? `<span class="tag-pill orange">Tiết kiệm ${g.maxSavingsPercentage}% (-${g.maxSavingsVNDString})</span>` : ''}
+              </div>
+            ` : ''}
+            ${g.offers.map(o => {
+              const isCheapest = g.hasHiddenPriceTiers && o.priceInVND === minVnd;
+              return `
+                <div class="offer-row ${isCheapest ? 'best-deal' : ''}">
+                  <div>
+                    <div style="font-size:11px; color:var(--ios-secondary);">
+                      Mức #${o.rankIndex} ${isCheapest ? '• <b style="color:var(--ios-green)">GIÁ ẨN RẺ NHẤT</b>' : ''}
+                    </div>
+                    <div style="font-size:17px; font-weight:700; color:${isCheapest ? 'var(--ios-green)' : '#fff'};">${o.rawPrice}</div>
+                    ${o.region.currencyCode !== 'VND' ? `<div style="font-size:12px; color:var(--ios-secondary);">≈ ${o.formattedVND}</div>` : ''}
+                  </div>
+                  <button class="ios-pill-action" style="${isCheapest ? 'background:var(--ios-green); color:#042810;' : ''}" onclick='openPaymentSheet(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
+                    + Mua Gói Này
+                  </button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadMultiRegion() {
+      const list = document.getElementById('multiOffersList');
+      list.innerHTML = '<div style="text-align:center; padding:32px; color:var(--ios-secondary);">Đang quét đồng thời 10 Quốc gia & quy đổi tỷ giá VNĐ...</div>';
+      const res = await fetch(`/api/multi?appId=${currentApp.trackId}`);
+      currentMultiData = await res.json();
+      const results = (currentMultiData.results || []).filter(r => r.offers && r.offers.length > 0);
+
+      list.innerHTML = results.map((r, idx) => `
+        <div class="offer-group-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="font-size:16px; font-weight:700;">
+              ${idx === 0 ? '👑 ' : ''}${r.region.flag} Store ${r.region.name}
+            </div>
+            <button class="ios-pill-action" onclick="activateCountryBackground('${r.region.id}', true)">
+              Đổi sang vùng này
+            </button>
+          </div>
+          ${r.offers.slice(0, 8).map(o => `
+            <div class="offer-row">
+              <div>
+                <div style="font-size:14px; font-weight:600;">${o.title}</div>
+                <div style="font-size:12px; color:var(--ios-secondary);">${o.rawPrice} → <b style="color:var(--ios-green);">${o.formattedVND}</b></div>
+              </div>
+              <button class="ios-pill-action" onclick='openPaymentSheet(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
+                + Mua
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+
+    function openPaymentSheet(offer) {
+      const sheet = document.getElementById('sheetBody');
+      sheet.innerHTML = `
+        <div class="sheet-handle"></div>
+        <div style="text-align:center; margin-bottom:14px;">
+          <div style="font-size:13px; color:var(--ios-secondary);">${currentApp.trackName} • ${offer.region.flag} Store ${offer.region.name}</div>
+          <div style="font-size:20px; font-weight:700; margin:4px 0;">${offer.title}</div>
+          <div style="font-size:24px; font-weight:800; color:var(--ios-green);">${offer.rawPrice} <span style="font-size:15px; color:var(--ios-secondary);">(${offer.formattedVND})</span></div>
+        </div>
+
+        <a href="itms-apps://apps.apple.com/account/subscriptions" class="ios-btn-large green">
+          <span>💳 1. Mở Bảng Đổi Gói Ẩn & Thanh Toán (See All Plans)</span>
+          <span>↗</span>
+        </a>
+
+        <button class="ios-btn-large" onclick="activateCountryBackground('${offer.region.id}', true)">
+          <span>🌍 2. Tự Động Chuyển Vùng Sang ${offer.region.flag} ${offer.region.name}</span>
+          <span>›</span>
+        </button>
+
+        <a href="itms-apps://itunes.apple.com/${offer.region.id}/app/id${currentApp.trackId}?mt=8" class="ios-btn-large gray">
+          <span>🛍️ 3. Mở ${currentApp.trackName} trên App Store (${offer.region.name})</span>
+          <span>↗</span>
+        </a>
+
+        <button class="ios-btn-large gray" onclick="closeSheet()">Đóng</button>
+      `;
+      document.getElementById('actionSheet').classList.add('open');
+    }
+
+    function closeSheet() {
+      document.getElementById('actionSheet').classList.remove('open');
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,8 +1,11 @@
 import Foundation
+import UIKit
 
 @MainActor
 final class CurrencyService: ObservableObject {
     static let shared = CurrencyService()
+
+    @Published var activeRegion: StorefrontRegion = StorefrontRegion.defaultRegion
 
     /// Tỷ giá quy đổi 1 đơn vị ngoại tệ sang VNĐ (1 Currency = X VND)
     @Published private(set) var ratesToVND: [String: Double] = [
@@ -21,7 +24,19 @@ final class CurrencyService: ObservableObject {
     @Published private(set) var lastUpdated: Date?
     private var hasFetchedLiveRates = false
 
-    private init() {}
+    private init() {
+        if let savedId = UserDefaults.standard.string(forKey: "IAPHunter.ActiveRegion"),
+           let found = StorefrontRegion.supportedRegions.first(where: { $0.id == savedId }) {
+            self.activeRegion = found
+        }
+    }
+
+    /// Chuyển vùng tự động + Sao chép sẵn thông tin Địa chỉ/Mã Zip của Quốc gia đó vào Clipboard iPhone
+    func switchRegionAndCopyBilling(_ region: StorefrontRegion) {
+        self.activeRegion = region
+        UserDefaults.standard.set(region.id, forKey: "IAPHunter.ActiveRegion")
+        UIPasteboard.general.string = region.billing.zipCode
+    }
 
     /// Cập nhật tỷ giá trực tiếp từ Open Exchange Rates API (không cần API Key)
     func refreshRatesIfNeeded() async {
@@ -44,7 +59,6 @@ final class CurrencyService: ObservableObject {
 
             var updatedRates: [String: Double] = ["VND": 1.0, "USD": usdToVND]
             for (code, ratePerUSD) in decoded.rates where ratePerUSD > 0 {
-                // 1 USD = ratePerUSD [code] => 1 [code] = usdToVND / ratePerUSD VND
                 updatedRates[code] = usdToVND / ratePerUSD
             }
 
@@ -66,14 +80,20 @@ final class CurrencyService: ObservableObject {
             return 0.0
         }
 
-        // Nếu tiền tệ không có số thập phân trên App Store (như VND, IDR, JPY)
-        if !region.hasDecimals {
+        // Hỗ trợ hậu tố "ribu" (nghìn) và "juta" (triệu) của Indonesia trên App Store
+        var multiplier: Double = 1.0
+        if lower.contains("juta") || lower.contains("jt") {
+            multiplier = 1_000_000.0
+        } else if lower.contains("ribu") || lower.contains("rb") {
+            multiplier = 1_000.0
+        }
+
+        if !region.hasDecimals && multiplier == 1.0 {
             let digitsOnly = trimmed.unicodeScalars.filter { CharacterSet.decimalDigits.contains($0) }
             let numStr = String(String.UnicodeScalarView(digitsOnly))
             return Double(numStr)
         }
 
-        // Lọc chỉ giữ chữ số, dấu chấm và dấu phẩy
         let allowed = CharacterSet(charactersIn: "0123456789.,")
         let filteredScalars = trimmed.unicodeScalars.filter { allowed.contains($0) }
         var cleaned = String(String.UnicodeScalarView(filteredScalars))
@@ -81,15 +101,14 @@ final class CurrencyService: ObservableObject {
         guard !cleaned.isEmpty else { return nil }
 
         if region.decimalSeparator == "," {
-            // Ví dụ Thổ Nhĩ Kỳ / Brazil: "1.209,99" -> bỏ dấu ".", đổi "," thành "."
             cleaned = cleaned.replacingOccurrences(of: ".", with: "")
             cleaned = cleaned.replacingOccurrences(of: ",", with: ".")
         } else {
-            // Ví dụ Mỹ / Nigeria / Ấn Độ / Ai Cập: "47,500.00" hoặc "1,379" -> bỏ dấu ","
             cleaned = cleaned.replacingOccurrences(of: ",", with: "")
         }
 
-        return Double(cleaned)
+        guard let val = Double(cleaned) else { return nil }
+        return val * multiplier
     }
 
     /// Quy đổi giá trị số của một vùng sang VNĐ

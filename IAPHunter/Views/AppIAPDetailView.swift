@@ -8,7 +8,7 @@ struct AppIAPDetailView: View {
     @StateObject private var savedManager = SavedDealsManager.shared
 
     @State private var selectedTab: DetailTab = .singleRegion
-    @State private var selectedRegion: StorefrontRegion = .defaultRegion
+    @State private var selectedRegion: StorefrontRegion = CurrencyService.shared.activeRegion
 
     // Single region state
     @State private var regionOffers: [IAPOfferItem] = []
@@ -134,6 +134,7 @@ struct AppIAPDetailView: View {
                     ForEach(StorefrontRegion.supportedRegions) { region in
                         Button {
                             selectedRegion = region
+                            currencyService.switchRegionAndCopyBilling(region)
                         } label: {
                             HStack(spacing: 6) {
                                 Text(region.flag)

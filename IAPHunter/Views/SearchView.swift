@@ -3,6 +3,7 @@ import UIKit
 
 struct SearchView: View {
     @StateObject private var iapService = AppStoreIAPService.shared
+    @StateObject private var currencyService = CurrencyService.shared
     @State private var searchText = ""
     @State private var searchResults: [AppSearchResult] = []
     @State private var isSearching = false
@@ -14,14 +15,14 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: 16) {
                     // Search Box & Clipboard Quick Action
                     VStack(spacing: 10) {
                         HStack(spacing: 10) {
                             HStack {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundStyle(.secondary)
-                                TextField("Tên App, Link App Store hoặc App ID...", text: $searchText)
+                                TextField("Tìm Google One, Duolingo, Link App...", text: $searchText)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
                                     .submitLabel(.search)
@@ -38,17 +39,17 @@ struct SearchView: View {
                                     }
                                 }
                             }
-                            .padding(12)
+                            .padding(11)
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
 
                             Button {
                                 Task { await performSearch() }
                             } label: {
-                                Text("Quét")
-                                    .font(.subheadline.weight(.bold))
+                                Text("Tìm")
+                                    .font(.subheadline.weight(.semibold))
                                     .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                                    .padding(.vertical, 11)
                                     .background(Color.blue)
                                     .foregroundStyle(.white)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -93,7 +94,7 @@ struct SearchView: View {
                     if isSearching || isLoadingPreset {
                         VStack(spacing: 10) {
                             ProgressView()
-                            Text("Đang truy vấn dữ liệu từ Apple App Store...")
+                            Text("Đang kết nối Apple App Store...")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -107,73 +108,96 @@ struct SearchView: View {
 
                     // Search Results List
                     if !searchResults.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("KẾT QUẢ TÌM KIẾM (\(searchResults.count))")
-                                .font(.caption.weight(.bold))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                                .padding(.horizontal)
+                                .padding(.horizontal, 20)
 
-                            ForEach(searchResults) { app in
-                                NavigationLink(value: app) {
-                                    appRowView(app)
+                            VStack(spacing: 0) {
+                                ForEach(Array(searchResults.enumerated()), id: \.element.id) { index, app in
+                                    NavigationLink(value: app) {
+                                        appCellView(app)
+                                    }
+                                    .buttonStyle(.plain)
+                                    if index < searchResults.count - 1 {
+                                        Divider().padding(.leading, 78)
+                                    }
                                 }
-                                .buttonStyle(.plain)
                             }
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal)
                         }
                     } else {
-                        // Popular Apps with Hidden IAP Offers
-                        VStack(alignment: .leading, spacing: 12) {
+                        // Authentic iOS App Store Inset Grouped List for Presets (Including Google One)
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("APP PHỔ BIẾN NHIỀU GÓI IAP ẨN")
-                                    .font(.caption.weight(.bold))
+                                Text("GÓI IAP ẨN NỔI BẬT (GỒM GOOGLE ONE)")
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
                                 Spacer()
-                                Text("Chạm để quét ngay")
+                                Text("Chạm để quét")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
-                            .padding(.horizontal)
+                            .padding(.horizontal, 20)
 
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(PresetAppItem.popularApps) { preset in
+                            VStack(spacing: 0) {
+                                ForEach(Array(PresetAppItem.popularApps.enumerated()), id: \.element.id) { index, preset in
                                     Button {
                                         Task { await openPresetApp(preset) }
                                     } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack {
-                                                Image(systemName: preset.iconSystemName)
-                                                    .font(.title3)
-                                                    .foregroundStyle(.blue)
-                                                    .frame(width: 36, height: 36)
-                                                    .background(Color.blue.opacity(0.12))
-                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                Spacer()
+                                        HStack(spacing: 13) {
+                                            AsyncImage(url: preset.iconURL) { image in
+                                                image.resizable().scaledToFill()
+                                            } placeholder: {
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(Color.secondary.opacity(0.2))
+                                            }
+                                            .frame(width: 52, height: 52)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(preset.name)
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(.primary)
+                                                    .lineLimit(1)
+                                                Text(preset.subtitle)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(1)
                                                 Text(preset.badgeText)
                                                     .font(.system(size: 10, weight: .bold))
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 3)
-                                                    .background(Color.orange.opacity(0.15))
-                                                    .foregroundStyle(.orange)
-                                                    .clipShape(Capsule())
+                                                    .padding(.horizontal, 7)
+                                                    .padding(.vertical, 2)
+                                                    .background(Color.green.opacity(0.16))
+                                                    .foregroundStyle(.green)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 5))
                                             }
-                                            Text(preset.name)
-                                                .font(.subheadline.weight(.bold))
-                                                .foregroundStyle(.primary)
-                                                .lineLimit(1)
-                                            Text(preset.subtitle)
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(2)
-                                                .multilineTextAlignment(.leading)
+
+                                            Spacer()
+
+                                            Text("QUÉT")
+                                                .font(.caption.weight(.bold))
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 7)
+                                                .background(Color.blue.opacity(0.16))
+                                                .foregroundStyle(.blue)
+                                                .clipShape(Capsule())
                                         }
-                                        .padding(12)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color(.secondarySystemGroupedBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 11)
                                     }
                                     .buttonStyle(.plain)
+
+                                    if index < PresetAppItem.popularApps.count - 1 {
+                                        Divider().padding(.leading, 80)
+                                    }
                                 }
                             }
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                             .padding(.horizontal)
                         }
                     }
@@ -181,7 +205,30 @@ struct SearchView: View {
                 .padding(.vertical, 12)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("IAP Hunter iOS")
+            .navigationTitle("IAP Hunter")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        ForEach(StorefrontRegion.supportedRegions) { region in
+                            Button {
+                                currencyService.switchRegionAndCopyBilling(region)
+                            } label: {
+                                Text("\(region.flag) \(region.name) (\(region.currencyCode))")
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(currencyService.activeRegion.flag)
+                            Text(currencyService.activeRegion.id.uppercased())
+                                .font(.caption.weight(.bold))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
             .navigationDestination(for: AppSearchResult.self) { app in
                 AppIAPDetailView(app: app)
             }
@@ -196,18 +243,18 @@ struct SearchView: View {
         }
     }
 
-    private func appRowView(_ app: AppSearchResult) -> some View {
-        HStack(spacing: 12) {
+    private func appCellView(_ app: AppSearchResult) -> some View {
+        HStack(spacing: 13) {
             AsyncImage(url: app.highResIconURL) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.secondary.opacity(0.2))
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 52, height: 52)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(app.trackName)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -216,29 +263,27 @@ struct SearchView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                Text(app.bundleId)
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(.blue)
-                    .lineLimit(1)
             }
             Spacer()
-            Image(systemName: "chevron.right")
+            Text("QUÉT")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Color.blue.opacity(0.16))
+                .foregroundStyle(.blue)
+                .clipShape(Capsule())
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     private func performSearch() async {
         isSearching = true
         errorMessage = nil
         do {
-            searchResults = try await iapService.searchApps(query: searchText)
+            searchResults = try await iapService.searchApps(query: searchText, country: currencyService.activeRegion.id)
             if searchResults.isEmpty {
-                errorMessage = "Không tìm thấy ứng dụng phù hợp. Hãy thử nhập tên khác hoặc dán link App Store."
+                errorMessage = "Không tìm thấy ứng dụng phù hợp."
             }
         } catch {
             errorMessage = "Lỗi kết nối: \(error.localizedDescription)"
@@ -250,7 +295,7 @@ struct SearchView: View {
         isLoadingPreset = true
         errorMessage = nil
         do {
-            if let app = try await iapService.lookupApp(byId: preset.id) {
+            if let app = try await iapService.lookupApp(byId: preset.id, country: currencyService.activeRegion.id) {
                 selectedAppForNavigation = app
             } else {
                 errorMessage = "Không thể tải thông tin ứng dụng \(preset.name)."

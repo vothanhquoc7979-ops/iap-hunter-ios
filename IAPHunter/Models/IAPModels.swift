@@ -1,5 +1,14 @@
 import Foundation
 
+// MARK: - Billing Info for Apple ID Region Switching
+struct RegionBillingTemplate: Hashable, Codable {
+    let street: String
+    let city: String
+    let state: String
+    let zipCode: String
+    let phone: String
+}
+
 // MARK: - Storefront / Country Region Model
 struct StorefrontRegion: Identifiable, Hashable, Codable {
     let id: String          // ISO country code lowercase, e.g. "vn", "tr", "ng"
@@ -8,18 +17,49 @@ struct StorefrontRegion: Identifiable, Hashable, Codable {
     let currencyCode: String // Mã tiền tệ ISO, e.g. "VND", "TRY", "NGN"
     let decimalSeparator: String // Dấu phân cách thập phân chuẩn trên App Store của vùng đó
     let hasDecimals: Bool   // Tiền tệ có phần thập phân trên App Store hay không
+    let billing: RegionBillingTemplate
 
     static let supportedRegions: [StorefrontRegion] = [
-        StorefrontRegion(id: "vn", name: "Việt Nam", flag: "🇻🇳", currencyCode: "VND", decimalSeparator: ",", hasDecimals: false),
-        StorefrontRegion(id: "tr", name: "Thổ Nhĩ Kỳ", flag: "🇹🇷", currencyCode: "TRY", decimalSeparator: ",", hasDecimals: true),
-        StorefrontRegion(id: "ng", name: "Nigeria", flag: "🇳🇬", currencyCode: "NGN", decimalSeparator: ".", hasDecimals: true),
-        StorefrontRegion(id: "eg", name: "Ai Cập", flag: "🇪🇬", currencyCode: "EGP", decimalSeparator: ".", hasDecimals: true),
-        StorefrontRegion(id: "in", name: "Ấn Độ", flag: "🇮🇳", currencyCode: "INR", decimalSeparator: ".", hasDecimals: true),
-        StorefrontRegion(id: "pk", name: "Pakistan", flag: "🇵🇰", currencyCode: "PKR", decimalSeparator: ".", hasDecimals: true),
-        StorefrontRegion(id: "br", name: "Brazil", flag: "🇧🇷", currencyCode: "BRL", decimalSeparator: ",", hasDecimals: true),
-        StorefrontRegion(id: "id", name: "Indonesia", flag: "🇮🇩", currencyCode: "IDR", decimalSeparator: ",", hasDecimals: false),
-        StorefrontRegion(id: "ph", name: "Philippines", flag: "🇵🇭", currencyCode: "PHP", decimalSeparator: ".", hasDecimals: true),
-        StorefrontRegion(id: "us", name: "Mỹ (US)", flag: "🇺🇸", currencyCode: "USD", decimalSeparator: ".", hasDecimals: true)
+        StorefrontRegion(
+            id: "vn", name: "Việt Nam", flag: "🇻🇳", currencyCode: "VND", decimalSeparator: ",", hasDecimals: false,
+            billing: RegionBillingTemplate(street: "123 Lê Lợi, Quận 1", city: "Hồ Chí Minh", state: "Hồ Chí Minh", zipCode: "700000", phone: "0901234567")
+        ),
+        StorefrontRegion(
+            id: "tr", name: "Thổ Nhĩ Kỳ", flag: "🇹🇷", currencyCode: "TRY", decimalSeparator: ",", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "Istiklal Cad. No 45 Beyoglu", city: "Istanbul", state: "Istanbul", zipCode: "34430", phone: "5321234567")
+        ),
+        StorefrontRegion(
+            id: "ng", name: "Nigeria", flag: "🇳🇬", currencyCode: "NGN", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "14 Ahmadu Bello Way, Victoria Island", city: "Lagos", state: "Lagos", zipCode: "101241", phone: "8031234567")
+        ),
+        StorefrontRegion(
+            id: "eg", name: "Ai Cập", flag: "🇪🇬", currencyCode: "EGP", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "22 Tahrir Square, Downtown", city: "Cairo", state: "Cairo", zipCode: "11511", phone: "1001234567")
+        ),
+        StorefrontRegion(
+            id: "in", name: "Ấn Độ", flag: "🇮🇳", currencyCode: "INR", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "42 MG Road, Connaught Place", city: "New Delhi", state: "Delhi", zipCode: "110001", phone: "9810123456")
+        ),
+        StorefrontRegion(
+            id: "pk", name: "Pakistan", flag: "🇵🇰", currencyCode: "PKR", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "18 Main Boulevard Gulberg", city: "Lahore", state: "Punjab", zipCode: "54660", phone: "3001234567")
+        ),
+        StorefrontRegion(
+            id: "br", name: "Brazil", flag: "🇧🇷", currencyCode: "BRL", decimalSeparator: ",", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "Av. Paulista 1578, Bela Vista", city: "Sao Paulo", state: "SP", zipCode: "01310-200", phone: "11987654321")
+        ),
+        StorefrontRegion(
+            id: "id", name: "Indonesia", flag: "🇮🇩", currencyCode: "IDR", decimalSeparator: ",", hasDecimals: false,
+            billing: RegionBillingTemplate(street: "Jl. MH Thamrin No. 10", city: "Jakarta Pusat", state: "DKI Jakarta", zipCode: "10310", phone: "81234567890")
+        ),
+        StorefrontRegion(
+            id: "ph", name: "Philippines", flag: "🇵🇭", currencyCode: "PHP", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "6750 Ayala Avenue", city: "Makati", state: "Metro Manila", zipCode: "1226", phone: "9171234567")
+        ),
+        StorefrontRegion(
+            id: "us", name: "Mỹ (US - 0% Thuế)", flag: "🇺🇸", currencyCode: "USD", decimalSeparator: ".", hasDecimals: true,
+            billing: RegionBillingTemplate(street: "700 SW 5th Ave", city: "Portland", state: "OR (Oregon)", zipCode: "97204", phone: "5035550199")
+        )
     ]
 
     static let defaultRegion: StorefrontRegion = supportedRegions[0]
@@ -52,8 +92,8 @@ struct ITunesSearchResponse: Codable {
 // MARK: - Individual IAP Item parsed from App Store
 struct IAPOfferItem: Identifiable, Hashable, Codable {
     let id: UUID
-    let title: String               // Tên gói IAP, ví dụ: "Super Duolingo"
-    let rawPrice: String            // Giá gốc hiển thị trên Store, ví dụ: "599.000đ" hoặc "₺329,99"
+    let title: String               // Tên gói IAP
+    let rawPrice: String            // Giá gốc hiển thị trên Store
     let numericPrice: Double?       // Giá trị số đã bóc tách
     let priceInVND: Double?         // Giá quy đổi ra VNĐ
     let region: StorefrontRegion    // Vùng Store tương ứng
@@ -88,11 +128,11 @@ struct IAPOfferItem: Identifiable, Hashable, Codable {
     }
 }
 
-// MARK: - Grouped IAP Offers by Name (Phát hiện các mức giá ẩn / A-B Testing của cùng 1 gói)
+// MARK: - Grouped IAP Offers by Name
 struct IAPOfferGroup: Identifiable, Hashable {
-    let id: String                  // Tên gói chuẩn hóa
-    let title: String               // Tên hiển thị
-    let offers: [IAPOfferItem]      // Tất cả các mức giá tìm thấy cho gói này (sắp xếp từ rẻ nhất -> đắt nhất)
+    let id: String
+    let title: String
+    let offers: [IAPOfferItem]
 
     var cheapestOffer: IAPOfferItem? {
         offers.min { ($0.priceInVND ?? .greatestFiniteMagnitude) < ($1.priceInVND ?? .greatestFiniteMagnitude) }
@@ -102,13 +142,11 @@ struct IAPOfferGroup: Identifiable, Hashable {
         offers.max { ($0.priceInVND ?? 0) < ($1.priceInVND ?? 0) }
     }
 
-    /// Gói này có nhiều mức giá ẩn (A/B testing hoặc Retention tier) khác nhau hay không
     var hasHiddenPriceTiers: Bool {
         let distinctPrices = Set(offers.map { $0.rawPrice })
         return distinctPrices.count > 1
     }
 
-    /// Phần trăm tiết kiệm được nếu chọn gói ẩn rẻ nhất so với gói đắt nhất cùng tên
     var maxSavingsPercentage: Int? {
         guard let minVND = cheapestOffer?.priceInVND,
               let maxVND = mostExpensiveOffer?.priceInVND,
@@ -118,7 +156,6 @@ struct IAPOfferGroup: Identifiable, Hashable {
         return Int(round(((maxVND - minVND) / maxVND) * 100))
     }
 
-    /// Số tiền VNĐ tiết kiệm được
     var maxSavingsVNDString: String? {
         guard let minVND = cheapestOffer?.priceInVND,
               let maxVND = mostExpensiveOffer?.priceInVND,
@@ -149,22 +186,72 @@ struct RegionIAPScanResult: Identifiable, Hashable {
     }
 }
 
-// MARK: - Popular Preset Apps known for Hidden IAPs
+// MARK: - Popular Preset Apps with Real App Store Icons (Including Google One)
 struct PresetAppItem: Identifiable {
     let id: Int
     let name: String
     let subtitle: String
-    let iconSystemName: String
+    let iconURLString: String
     let badgeText: String
 
+    var iconURL: URL? { URL(string: iconURLString) }
+
     static let popularApps: [PresetAppItem] = [
-        PresetAppItem(id: 570060128, name: "Duolingo", subtitle: "Nhiều mức giá Super/Family ẩn", iconSystemName: "character.book.closed.fill", badgeText: "Hot Deal"),
-        PresetAppItem(id: 1500855883, name: "CapCut", subtitle: "Gói Pro tháng/năm chênh lệch lớn", iconSystemName: "video.fill", badgeText: "Phổ biến"),
-        PresetAppItem(id: 544007664, name: "YouTube", subtitle: "YouTube Premium đa vùng", iconSystemName: "play.rectangle.fill", badgeText: "Đa vùng"),
-        PresetAppItem(id: 547702041, name: "Tinder", subtitle: "Nhiều tier Gold/Platinum A/B test", iconSystemName: "flame.fill", badgeText: "Nhiều gói ẩn"),
-        PresetAppItem(id: 897446215, name: "Canva", subtitle: "Canva Pro & gói ưu đãi ẩn", iconSystemName: "paintbrush.pointed.fill", badgeText: "Thiết kế"),
-        PresetAppItem(id: 6448311069, name: "ChatGPT", subtitle: "Kiểm tra gói Plus các vùng", iconSystemName: "sparkles", badgeText: "AI"),
-        PresetAppItem(id: 1600525061, name: "Locket Widget", subtitle: "Locket Gold nhiều mức giá", iconSystemName: "heart.square.fill", badgeText: "Giới trẻ"),
-        PresetAppItem(id: 959813437, name: "Bumble", subtitle: "Boost & Premium nhiều mức giá", iconSystemName: "bubble.left.and.bubble.right.fill", badgeText: "A/B Test")
+        PresetAppItem(
+            id: 1451784328,
+            name: "Google One",
+            subtitle: "100GB, 200GB, 2TB & Google AI Plus đa quốc gia",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/dc/2e/e5/dc2ee5ef-a9fe-5e46-c268-08152216c862/logo_one_color-0-0-1x_U007emarketing-0-0-0-7-0-0-0-0-85-220.png/256x256bb.jpg",
+            badgeText: "Rẻ hơn 65%"
+        ),
+        PresetAppItem(
+            id: 570060128,
+            name: "Duolingo",
+            subtitle: "Gói Super Duolingo ẩn 599.000đ (Giá gốc 860.000đ)",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/8c/31/28/8c312832-119b-31b5-86a0-07450171d52d/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg",
+            badgeText: "-261.000đ"
+        ),
+        PresetAppItem(
+            id: 547702041,
+            name: "Tinder",
+            subtitle: "Tinder Gold ẩn 56.000đ (VN) & 20.500đ (Thổ Nhĩ Kỳ)",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7a/39/53/7a39535c-d91c-82a7-019b-f2b741393987/AppIcon-0-0-1x_U007emarketing-0-7-0-0-85-220.png/256x256bb.jpg",
+            badgeText: "Ẩn -70%"
+        ),
+        PresetAppItem(
+            id: 1500855883,
+            name: "CapCut",
+            subtitle: "Gói Standard/Monthly ẩn 117.000đ vs 222.000đ",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0f/10/c5/0f10c5b6-0564-9a43-501c-6a2186192350/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg",
+            badgeText: "Phổ biến"
+        ),
+        PresetAppItem(
+            id: 544007664,
+            name: "YouTube",
+            subtitle: "So sánh gói YouTube Premium & Music 10 nước",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/54/2c/c2/542cc28f-06a7-52b9-3644-b61493f83226/logo_youtube_2024_q4_color-0-1x_U007emarketing-0-0-0-7-0-0-0-85-220-0.png/256x256bb.jpg",
+            badgeText: "Đa vùng"
+        ),
+        PresetAppItem(
+            id: 6448311069,
+            name: "ChatGPT",
+            subtitle: "Kiểm tra giá gói ChatGPT Plus các vùng Store",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/0b/2c/4c/0b2c4cd6-9371-3d26-59a8-2a7a1d512008/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/256x256bb.jpg",
+            badgeText: "AI Plus"
+        ),
+        PresetAppItem(
+            id: 897446215,
+            name: "Canva",
+            subtitle: "Các gói Canva Pro tháng & năm ẩn theo vùng",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/85/79/4b/85794b8d-0861-5832-3137-04a9b617a306/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg",
+            badgeText: "Thiết kế"
+        ),
+        PresetAppItem(
+            id: 1600525061,
+            name: "Locket Widget",
+            subtitle: "Locket Gold nhiều mức giá ưu đãi ẩn",
+            iconURLString: "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7d/49/46/7d494647-e052-885c-6947-761771306332/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/256x256bb.jpg",
+            badgeText: "Giới trẻ"
+        )
     ]
 }
